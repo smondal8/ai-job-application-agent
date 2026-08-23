@@ -2,7 +2,7 @@
 set -e
 
 echo "================================================================"
-echo "AI Job Application Agent - Phase 1 Environment Setup"
+echo "AI Job Application Agent - Environment Setup"
 echo "================================================================"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

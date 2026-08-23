@@ -47,27 +47,38 @@ AI Alignment Researcher,Anthropic,San Francisco, CA,hybrid,200000,260000
     csv_batch = csv_res.json()
     assert csv_batch["inserted_count"] == 2
 
-    # 3. Test Seed Fixtures endpoint
+    # 3. Ingest via Multipart Form-Data File Upload
+    file_csv_content = b'title,company,location,remote_type\n"MLOps Platform Lead","Cohere","Toronto, Canada","hybrid"'
+    upload_res = client.post(
+        "/api/v1/jobs/ingest/file",
+        files={"file": ("cohere_jobs.csv", file_csv_content, "text/csv")},
+    )
+    assert upload_res.status_code == 201
+    upload_batch = upload_res.json()
+    assert upload_batch["inserted_count"] == 1
+    assert upload_batch["filename"] == "cohere_jobs.csv"
+
+    # 4. Test Seed Fixtures endpoint
     seed_res = client.post("/api/v1/jobs/ingest/seed-fixtures")
     assert seed_res.status_code == 200
     batches = seed_res.json()
     assert len(batches) >= 1
 
-    # 4. Filter Jobs by remote_type and search
+    # 5. Filter Jobs by remote_type and search
     filter_res = client.get("/api/v1/jobs?remote_type=remote")
     assert filter_res.status_code == 200
     remote_jobs = filter_res.json()
     assert remote_jobs["total"] >= 1
     assert all(j["remote_type"] == "remote" for j in remote_jobs["items"])
 
-    # 5. List Companies Registry
+    # 6. List Companies Registry
     comp_res = client.get("/api/v1/companies")
     assert comp_res.status_code == 200
     comp_data = comp_res.json()
     assert comp_data["total"] >= 2
     assert any(c["name"] == "Anthropic" or c["normalized_name"] == "anthropic" for c in comp_data["items"])
 
-    # 6. List Ingestion Batches
+    # 7. List Ingestion Batches
     batches_res = client.get("/api/v1/jobs/ingest/batches")
     assert batches_res.status_code == 200
-    assert batches_res.json()["total"] >= 2
+    assert batches_res.json()["total"] >= 3

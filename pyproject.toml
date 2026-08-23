@@ -29,6 +29,6 @@ dev = [
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = "-ra -q"
-testpaths = ["tests"]
+testpaths = ["backend/tests"]
 asyncio_mode = "auto"
-pythonpath = ["."]
+pythonpath = ["backend"]
