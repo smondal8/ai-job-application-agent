@@ -1,4 +1,4 @@
-.PHONY: setup test run-backend run-frontend migrate clean
+.PHONY: setup test run-backend run-frontend stop migrate clean
 
 setup:
 	./scripts/setup.sh
@@ -11,6 +11,9 @@ run-backend:
 
 run-frontend:
 	./scripts/run_frontend.sh
+
+stop:
+	./scripts/stop.sh
 
 migrate:
 	./scripts/migrate.sh

@@ -11,6 +11,12 @@ An intelligent, autonomous job application agent engineered with a local-first a
 
 ---
 
+## Documentation Quick Links
+- 📘 **[Architecture & Pipeline Specification (ARCHITECTURE.md)](./ARCHITECTURE.md)**: Deep technical architecture covering Phase 1 through Phase 6.
+- 🛠️ **[Operations & API Reference Guide (OPERATIONS.md)](./OPERATIONS.md)**: Detailed guide for starting/stopping services, process management, health probes, and full curl API examples.
+
+---
+
 ## Phase 1 Scope & Foundation
 
 Phase 1 implements the complete foundational infrastructure and control plane:
@@ -53,8 +59,9 @@ ai-job-application-agent/
 ├── .env.example              # Environment variables template
 ├── .gitignore                # Git ignores for Python, Node, Vite, SQLite
 ├── Makefile                  # Developer shortcuts
-├── README.md                 # Project documentation
+├── README.md                 # Project overview & quickstart
 ├── ARCHITECTURE.md           # End-to-end architecture specification
+├── OPERATIONS.md             # Operations runbook & API endpoints reference
 ├── backend/
 │   ├── pyproject.toml        # Backend package metadata and pytest config
 │   ├── requirements.txt      # Production dependencies
@@ -118,6 +125,7 @@ ai-job-application-agent/
     ├── setup.sh              # Local environment bootstrapping
     ├── run_backend.sh        # Starts FastAPI uvicorn backend
     ├── run_frontend.sh       # Starts Vite dev server
+    ├── stop.sh               # Gracefully stops running services
     ├── test.sh               # Runs pytest & frontend builds
     └── migrate.sh            # Executes database migrations
 ```
@@ -165,6 +173,12 @@ make run-frontend
 - **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **Health Check Endpoint**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
+### 5. Stop Applications
+```bash
+make stop
+# OR: ./scripts/stop.sh
+```
+
 ---
 
 ## API Endpoints Reference
@@ -182,3 +196,5 @@ make run-frontend
 | `GET` | `/api/v1/jobs/{id}` | Retrieve single job by ID |
 | `GET` | `/api/v1/resumes` | Listing of stored candidate resumes |
 | `GET` | `/api/v1/applications` | Listing of application pipeline records |
+
+For full request/response schemas and curl examples, see **[OPERATIONS.md](./OPERATIONS.md)**.
