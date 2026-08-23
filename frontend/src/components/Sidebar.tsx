@@ -1,8 +1,9 @@
 import React from 'react';
 import {
   LayoutDashboard,
-  UserCheck,
+  Compass,
   Briefcase,
+  UserCheck,
   GitMerge,
   Database,
   Sliders,
@@ -10,7 +11,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export type NavTab = 'overview' | 'jobs' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
+export type NavTab = 'overview' | 'discovery' | 'jobs' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -23,6 +24,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'overview',
       label: 'System Overview',
       icon: <LayoutDashboard size={18} />,
+    },
+    {
+      id: 'discovery',
+      label: 'Job Discovery & Feeds',
+      icon: <Compass size={18} />,
+      badge: 'Phase 4',
     },
     {
       id: 'jobs',
@@ -46,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'schemas',
       label: 'Database Models',
       icon: <Database size={18} />,
-      badge: '15 Tables',
+      badge: '17 Tables',
     },
     {
       id: 'config',
@@ -66,11 +73,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <Sparkles size={20} color="#38bdf8" />
           <span style={{ fontWeight: 600, fontSize: '0.875rem', letterSpacing: '0.025em' }}>
-            Phase 3 Active
+            Phase 4 Active
           </span>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-          Normalized Job Database, JSON/CSV Ingestion, and Conservative Deduplication.
+          Source-Agnostic Discovery Adapters, Rate Limits, and Run Orchestration.
         </p>
       </div>
 
@@ -94,13 +101,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                   padding: '0.125rem 0.375rem',
                   borderRadius: '4px',
                   backgroundColor:
-                    item.badge === 'Phase 3'
+                    item.badge === 'Phase 4'
                       ? 'rgba(56, 189, 248, 0.2)'
+                      : item.badge === 'Phase 3'
+                      ? 'rgba(56, 189, 248, 0.15)'
                       : item.badge === 'Phase 2'
                       ? 'rgba(52, 211, 153, 0.2)'
                       : '#1e293b',
                   color:
-                    item.badge === 'Phase 3'
+                    item.badge === 'Phase 4'
+                      ? '#38bdf8'
+                      : item.badge === 'Phase 3'
                       ? '#38bdf8'
                       : item.badge === 'Phase 2'
                       ? '#34d399'
@@ -115,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       </nav>
 
       <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <div>Branch: <code style={{ color: '#38bdf8' }}>feature/phase-03</code></div>
+        <div>Branch: <code style={{ color: '#38bdf8' }}>feature/phase-04</code></div>
         <div>Engine: <code style={{ color: 'var(--text-secondary)' }}>SQLite WAL + Alembic</code></div>
       </div>
     </aside>

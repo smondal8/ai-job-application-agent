@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Database, Key, Link as LinkIcon, Table } from 'lucide-react';
 
 export const SchemaViewer: React.FC = () => {
-  const [selectedTable, setSelectedTable] = useState<string>('jobs');
+  const [selectedTable, setSelectedTable] = useState<string>('job_discovery_runs');
 
   const schemas: Record<
     string,
@@ -12,6 +12,37 @@ export const SchemaViewer: React.FC = () => {
       columns: { name: string; type: string; constraints: string; description: string }[];
     }
   > = {
+    job_discovery_runs: {
+      description: 'Audit log of multi-source job discovery executions and per-adapter metrics.',
+      phase: 'Phase 4 Active',
+      columns: [
+        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique execution ID' },
+        { name: 'run_id', type: 'String(64)', constraints: 'NOT NULL, Unique, Indexed', description: 'Correlation run identifier' },
+        { name: 'source', type: 'String(100)', constraints: 'NOT NULL', description: 'multi_source, greenhouse, lever, etc.' },
+        { name: 'criteria', type: 'JSON', constraints: 'NOT NULL', description: 'SearchCriteria snapshot' },
+        { name: 'total_discovered', type: 'Integer', constraints: 'Default: 0', description: 'Total postings discovered' },
+        { name: 'inserted_count', type: 'Integer', constraints: 'Default: 0', description: 'New jobs saved to catalog' },
+        { name: 'duplicate_count', type: 'Integer', constraints: 'Default: 0', description: 'Duplicates deduplicated' },
+        { name: 'error_count', type: 'Integer', constraints: 'Default: 0', description: 'Adapter error count' },
+        { name: 'status', type: 'String(50)', constraints: 'Default: running, Indexed', description: 'completed, partial, failed' },
+        { name: 'duration_ms', type: 'Float', constraints: 'Nullable', description: 'Total execution time in ms' },
+        { name: 'adapter_logs', type: 'JSON', constraints: 'Default: []', description: 'Per-adapter execution and fallback logs' },
+        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Created timestamp' },
+      ],
+    },
+    job_search_profiles: {
+      description: 'Saved search criteria templates for automated or 1-click repeated discovery.',
+      phase: 'Phase 4 Active',
+      columns: [
+        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique profile identifier' },
+        { name: 'name', type: 'String(255)', constraints: 'NOT NULL, Unique', description: 'Profile name template' },
+        { name: 'description', type: 'Text', constraints: 'Nullable', description: 'Optional user description' },
+        { name: 'criteria', type: 'JSON', constraints: 'NOT NULL', description: 'Target criteria configuration' },
+        { name: 'is_active', type: 'Boolean', constraints: 'Default: True, Indexed', description: 'Active template flag' },
+        { name: 'auto_run_interval_hours', type: 'Integer', constraints: 'Nullable', description: 'Optional periodic interval' },
+        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Created timestamp' },
+      ],
+    },
     jobs: {
       description: 'Normalized job listings catalog with deduplication hash and workplace metadata.',
       phase: 'Phase 3 Active',
@@ -59,23 +90,6 @@ export const SchemaViewer: React.FC = () => {
         { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Created timestamp' },
       ],
     },
-    job_ingestion_batches: {
-      description: 'Audit log of batch ingestion executions with inserted vs duplicate counts.',
-      phase: 'Phase 3 Active',
-      columns: [
-        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Batch sequence ID' },
-        { name: 'batch_id', type: 'String(64)', constraints: 'NOT NULL, Unique, Indexed', description: 'Unique batch correlation ID' },
-        { name: 'source', type: 'String(100)', constraints: 'NOT NULL', description: 'json_import, csv_import, etc.' },
-        { name: 'filename', type: 'String(255)', constraints: 'Nullable', description: 'Source file name' },
-        { name: 'total_records', type: 'Integer', constraints: 'Default: 0', description: 'Total records in feed' },
-        { name: 'inserted_count', type: 'Integer', constraints: 'Default: 0', description: 'New jobs inserted' },
-        { name: 'duplicate_count', type: 'Integer', constraints: 'Default: 0', description: 'Duplicates deduplicated' },
-        { name: 'error_count', type: 'Integer', constraints: 'Default: 0', description: 'Failed records' },
-        { name: 'status', type: 'String(50)', constraints: 'Default: completed', description: 'completed / failed' },
-        { name: 'error_log', type: 'JSON', constraints: 'Default: []', description: 'Detailed row error messages' },
-        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Ingestion timestamp' },
-      ],
-    },
     candidate_profiles: {
       description: 'Master candidate profile representing verified ground truth for downstream AI modules.',
       phase: 'Phase 2 Active',
@@ -86,28 +100,6 @@ export const SchemaViewer: React.FC = () => {
         { name: 'phone', type: 'String(50)', constraints: 'Nullable', description: 'Telephone number' },
         { name: 'is_verified', type: 'Boolean', constraints: 'Default: False, Indexed', description: 'Human verification gate' },
         { name: 'verified_at', type: 'DateTime', constraints: 'Nullable', description: 'Timestamp when approved' },
-      ],
-    },
-    work_experiences: {
-      description: 'Verified employment and work history entries.',
-      phase: 'Phase 2 Active',
-      columns: [
-        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'profile_id', type: 'Integer', constraints: 'FK -> candidate_profiles.id (CASCADE)', description: 'Parent profile' },
-        { name: 'company', type: 'String(255)', constraints: 'NOT NULL', description: 'Employer company' },
-        { name: 'position', type: 'String(255)', constraints: 'NOT NULL', description: 'Job title / position' },
-        { name: 'is_verified', type: 'Boolean', constraints: 'Default: False, Indexed', description: 'Human verified flag' },
-      ],
-    },
-    candidate_skills: {
-      description: 'Categorized candidate technical competencies and proficiencies.',
-      phase: 'Phase 2 Active',
-      columns: [
-        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'profile_id', type: 'Integer', constraints: 'FK -> candidate_profiles.id (CASCADE)', description: 'Parent profile' },
-        { name: 'name', type: 'String(100)', constraints: 'NOT NULL, Indexed', description: 'Skill name' },
-        { name: 'category', type: 'String(50)', constraints: 'Default: general', description: 'languages/frameworks/etc' },
-        { name: 'is_verified', type: 'Boolean', constraints: 'Default: False, Indexed', description: 'Human verified flag' },
       ],
     },
     audit_logs: {
@@ -124,7 +116,7 @@ export const SchemaViewer: React.FC = () => {
     },
   };
 
-  const current = schemas[selectedTable] || schemas['jobs'];
+  const current = schemas[selectedTable] || schemas['job_discovery_runs'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -133,7 +125,7 @@ export const SchemaViewer: React.FC = () => {
           Database Schema Explorer (SQLAlchemy + Alembic)
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-          Phase 3 models and normalized tables active in SQLite WAL mode.
+          Phase 4 models and discovery tables active in SQLite WAL mode.
         </p>
       </div>
 

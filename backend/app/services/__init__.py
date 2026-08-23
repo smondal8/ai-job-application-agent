@@ -1,18 +1,24 @@
-from app.services.file_storage_service import FileStorageService, storage_service
-from app.services.resume_parser_service import ResumeParserService, resume_parser
-from app.services.profile_service import CandidateProfileService, profile_service
-from app.services.job_dedup_service import JobDeduplicationService, job_dedup_service
-from app.services.job_ingestion_service import JobIngestionService, job_ingestion_service
+from app.services.file_storage_service import storage_service, FileStorageService
+from app.services.resume_parser_service import resume_parser, ResumeParserService
+from app.services.profile_service import profile_service, CandidateProfileService
+from app.services.job_dedup_service import job_dedup_service, JobDeduplicationService
+from app.services.job_ingestion_service import job_ingestion_service, JobIngestionService
+from app.services.discovery.registry import discovery_registry, DiscoveryAdapterRegistry
+from app.services.discovery.orchestrator import discovery_orchestrator, DiscoveryOrchestrationService
 
 __all__ = [
-    "FileStorageService",
     "storage_service",
-    "ResumeParserService",
+    "FileStorageService",
     "resume_parser",
-    "CandidateProfileService",
+    "ResumeParserService",
     "profile_service",
-    "JobDeduplicationService",
+    "CandidateProfileService",
     "job_dedup_service",
-    "JobIngestionService",
+    "JobDeduplicationService",
     "job_ingestion_service",
+    "JobIngestionService",
+    "discovery_registry",
+    "DiscoveryAdapterRegistry",
+    "discovery_orchestrator",
+    "DiscoveryOrchestrationService",
 ]

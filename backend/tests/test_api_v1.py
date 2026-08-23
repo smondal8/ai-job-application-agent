@@ -13,6 +13,7 @@ def test_api_v1_config_endpoint(client: TestClient):
 
 def test_api_v1_pipeline_endpoint(client: TestClient):
     response = client.get("/api/v1/pipeline")
+    assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
     assert len(data) == 6
@@ -20,6 +21,7 @@ def test_api_v1_pipeline_endpoint(client: TestClient):
     assert "core_foundation" in stage_ids
     assert "candidate_profile" in stage_ids
     assert "job_database" in stage_ids
+    assert "job_discovery" in stage_ids
     assert "browser_preparation" in stage_ids
 
 

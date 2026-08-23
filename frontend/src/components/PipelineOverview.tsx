@@ -3,7 +3,7 @@ import {
   Layers,
   UserCheck,
   Briefcase,
-  FileSearch,
+  Compass,
   FileText,
   Globe,
   Code,
@@ -15,7 +15,7 @@ interface PipelineOverviewProps {
 }
 
 export const PipelineOverview: React.FC<PipelineOverviewProps> = () => {
-  const [selectedStage, setSelectedStage] = useState<string>('job_database');
+  const [selectedStage, setSelectedStage] = useState<string>('job_discovery');
 
   const stageDetails: Record<
     string,
@@ -73,7 +73,7 @@ interface VerifiedGroundTruthContext {
     },
     job_database: {
       title: 'Normalized Job DB & Ingestion',
-      phase: 'Phase 3 (Active)',
+      phase: 'Phase 3 (Complete)',
       icon: <Briefcase size={24} color="#38bdf8" />,
       status: 'active',
       description:
@@ -93,37 +93,41 @@ interface JobIngestionBatchResponse {
   status: 'completed' | 'failed';
 }`,
     },
-    jd_analysis: {
-      title: 'JD Analysis & Match Scoring',
-      phase: 'Phase 4 (Planned)',
-      icon: <FileSearch size={24} color="#ec4899" />,
-      status: 'planned',
+    job_discovery: {
+      title: 'Job Discovery & Orchestration',
+      phase: 'Phase 4 (Active)',
+      icon: <Compass size={24} color="#38bdf8" />,
+      status: 'active',
       description:
-        'Analyzes job descriptions using NLP/LLM against verified candidate ground truth to extract technical competencies, required qualifications, soft skills, and match scoring.',
-      inputs: ['Job Description (description_raw)', 'Verified Candidate Profile'],
-      outputs: ['Fit Score (0-100)', 'Matched Skills', 'Missing Skills', 'JobAnalysis entity'],
-      tables: ['job_analyses', 'jobs'],
-      contract: `interface JDAnalysisContract {
-  job_id: number;
-  fit_score: number; // 0.0 - 100.0
-  fit_level: 'high' | 'medium' | 'low';
-  matched_skills: string[];
-  missing_skills: string[];
+        'Source-agnostic adapter framework with rate limiting, retries, and orchestration across Greenhouse, Lever, and remote feeds, with safe manual fallbacks for bot-protected platforms.',
+      inputs: ['Search Criteria (Keywords, Target Companies, Locations)', 'Saved Search Profiles'],
+      outputs: ['Discovered Job Records', 'Discovery Run Audit Logs', 'Direct Ingestion into DB'],
+      tables: ['job_discovery_runs', 'job_search_profiles', 'jobs', 'audit_logs'],
+      contract: `// Phase 4 Discovery Run Response
+interface DiscoveryRunResponse {
+  run_id: string;
+  source: string;
+  criteria: SearchCriteria;
+  total_discovered: number;
+  inserted_count: number;
+  duplicate_count: number;
+  status: 'completed' | 'partial' | 'failed';
+  adapter_logs: Array<{ adapter: string; status: string; discovered_count: number }>;
 }`,
     },
     resume_tailoring: {
-      title: 'Resume Tailoring & Generation',
+      title: 'JD Analysis & Resume Tailoring',
       phase: 'Phase 5 (Planned)',
       icon: <FileText size={24} color="#f59e0b" />,
       status: 'planned',
       description:
-        'Dynamically tailors master resume bullet points and summary to match job requirements without hallucination, generating tailored markdown, cover letters, and PDFs.',
-      inputs: ['Verified Ground Truth Resume', 'Job Analysis (JobAnalysis)'],
-      outputs: ['TailoredResume record', 'Custom Cover Letter', 'Generated PDF path'],
-      tables: ['resumes', 'tailored_resumes'],
+        'Analyzes job descriptions against verified candidate facts and dynamically tailors resumes, cover letters, and match fit scores without hallucination.',
+      inputs: ['Verified Ground Truth Resume', 'Job Description (description_raw)'],
+      outputs: ['TailoredResume record', 'Cover Letter', 'Fit Score (0-100)'],
+      tables: ['job_analyses', 'resumes', 'tailored_resumes'],
       contract: `interface ResumeTailoringContract {
   job_id: number;
-  base_resume_id: number;
+  fit_score: number;
   tailored_summary: string;
   highlighted_skills: string[];
 }`,
@@ -145,7 +149,7 @@ interface JobIngestionBatchResponse {
     },
   };
 
-  const currentDetail = stageDetails[selectedStage] || stageDetails['job_database'];
+  const currentDetail = stageDetails[selectedStage] || stageDetails['job_discovery'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -154,7 +158,7 @@ interface JobIngestionBatchResponse {
           End-to-End Pipeline Architecture
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 3 provides the normalized job database and ingestion layer.
+          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 4 provides the source-agnostic discovery framework.
         </p>
       </div>
 

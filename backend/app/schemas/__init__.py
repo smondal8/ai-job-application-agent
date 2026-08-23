@@ -1,4 +1,3 @@
-from app.schemas.common import ResponseEnvelope, PaginationMeta, MessageResponse
 from app.schemas.health import (
     HealthResponse,
     ReadinessResponse,
@@ -7,18 +6,33 @@ from app.schemas.health import (
     StorageHealth,
 )
 from app.schemas.config import SystemConfigResponse, PipelineStageInfo
-from app.schemas.job import JobBase, JobCreate, JobUpdate, JobResponse, JobListResponse
-from app.schemas.company import CompanyBase, CompanyCreate, CompanyResponse, CompanyListResponse
+from app.schemas.job import (
+    JobBase,
+    JobCreate,
+    JobUpdate,
+    JobResponse,
+    JobListResponse,
+)
+from app.schemas.company import CompanyCreate, CompanyResponse, CompanyListResponse
 from app.schemas.ingestion import (
     JobIngestJsonRequest,
     JobIngestCsvRequest,
     JobIngestionBatchResponse,
     JobIngestionBatchListResponse,
 )
-from app.schemas.resume import ResumeBase, ResumeCreate, ResumeResponse, ResumeListResponse
-from app.schemas.application import ApplicationBase, ApplicationCreate, ApplicationResponse, ApplicationListResponse
+from app.schemas.resume import (
+    ResumeBase,
+    ResumeCreate,
+    ResumeResponse,
+    ResumeListResponse,
+)
+from app.schemas.application import (
+    ApplicationBase,
+    ApplicationCreate,
+    ApplicationResponse,
+    ApplicationListResponse,
+)
 from app.schemas.candidate import (
-    CandidateProfileBase,
     CandidateProfileCreate,
     CandidateProfileUpdate,
     CandidateProfileResponse,
@@ -28,6 +42,7 @@ from app.schemas.candidate import (
     EducationCreate,
     EducationUpdate,
     EducationResponse,
+    CandidateSkillBase,
     CandidateSkillCreate,
     CandidateSkillBulkCreate,
     CandidateSkillResponse,
@@ -38,11 +53,18 @@ from app.schemas.candidate import (
     RawResumeImportResponse,
     VerifiedGroundTruthContextResponse,
 )
+from app.schemas.discovery import (
+    SearchCriteria,
+    DiscoveryRunRequest,
+    AdapterInfoResponse,
+    DiscoveryRunResponse,
+    DiscoveryRunListResponse,
+    SearchProfileCreate,
+    SearchProfileResponse,
+    SearchProfileListResponse,
+)
 
 __all__ = [
-    "ResponseEnvelope",
-    "PaginationMeta",
-    "MessageResponse",
     "HealthResponse",
     "ReadinessResponse",
     "LivenessResponse",
@@ -55,7 +77,6 @@ __all__ = [
     "JobUpdate",
     "JobResponse",
     "JobListResponse",
-    "CompanyBase",
     "CompanyCreate",
     "CompanyResponse",
     "CompanyListResponse",
@@ -71,7 +92,6 @@ __all__ = [
     "ApplicationCreate",
     "ApplicationResponse",
     "ApplicationListResponse",
-    "CandidateProfileBase",
     "CandidateProfileCreate",
     "CandidateProfileUpdate",
     "CandidateProfileResponse",
@@ -81,6 +101,7 @@ __all__ = [
     "EducationCreate",
     "EducationUpdate",
     "EducationResponse",
+    "CandidateSkillBase",
     "CandidateSkillCreate",
     "CandidateSkillBulkCreate",
     "CandidateSkillResponse",
@@ -90,4 +111,12 @@ __all__ = [
     "RawResumeImportCreateText",
     "RawResumeImportResponse",
     "VerifiedGroundTruthContextResponse",
+    "SearchCriteria",
+    "DiscoveryRunRequest",
+    "AdapterInfoResponse",
+    "DiscoveryRunResponse",
+    "DiscoveryRunListResponse",
+    "SearchProfileCreate",
+    "SearchProfileResponse",
+    "SearchProfileListResponse",
 ]

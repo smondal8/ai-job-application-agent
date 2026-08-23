@@ -73,7 +73,71 @@ export interface APIErrorResponse {
   };
 }
 
-// --- Phase 3 Job & Ingestion Types ---
+// --- Phase 4: Job Discovery & Adapter Types ---
+
+export interface SearchCriteria {
+  keywords: string[];
+  locations: string[];
+  remote_only: boolean;
+  target_companies: string[];
+  seniority_levels: string[];
+  min_salary?: number | null;
+  sources: string[];
+  max_results_per_source: number;
+}
+
+export interface AdapterInfo {
+  source_name: string;
+  display_name: string;
+  description: string;
+  is_reliable: boolean;
+  requires_auth: boolean;
+  supports_search_criteria: boolean;
+  rate_limit_per_minute: number;
+  fallback_mode?: string | null;
+  status: string;
+}
+
+export interface DiscoveryRun {
+  id: number;
+  run_id: string;
+  source: string;
+  criteria: Record<string, any>;
+  total_discovered: number;
+  inserted_count: number;
+  duplicate_count: number;
+  error_count: number;
+  status: string;
+  duration_ms?: number | null;
+  adapter_logs?: Array<Record<string, any>>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DiscoveryRunListResponse {
+  items: DiscoveryRun[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface SearchProfile {
+  id: number;
+  name: string;
+  description?: string | null;
+  criteria: SearchCriteria;
+  is_active: boolean;
+  auto_run_interval_hours?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SearchProfileListResponse {
+  items: SearchProfile[];
+  total: number;
+}
+
+// --- Phase 3: Job Database & Ingestion Types ---
 
 export interface Job {
   id: number;
@@ -159,7 +223,7 @@ export interface JobIngestionBatchListResponse {
   total: number;
 }
 
-// --- Phase 2 Candidate Profile Types ---
+// --- Phase 2: Candidate Profile Types ---
 
 export interface WorkExperience {
   id: number;
