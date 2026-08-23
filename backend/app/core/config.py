@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # Local Storage Directory
     STORAGE_DIR: str = "./data/storage"
 
+    # Local LLM Subsystem (Ollama on Apple Silicon GPU)
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    OLLAMA_MODEL: str = "qwen3:8b"
+    OLLAMA_TIMEOUT_SECONDS: float = 120.0
+    OLLAMA_TEMPERATURE: float = 0.2
+
     @property
     def is_sqlite(self) -> bool:
         return self.DATABASE_URL.startswith("sqlite")
@@ -53,8 +59,6 @@ class Settings(BaseSettings):
     def sqlite_db_path(self) -> Optional[Path]:
         if not self.is_sqlite:
             return None
-        # sqlite:///./data/job_agent.db -> ./data/job_agent.db
-        # sqlite:///:memory: -> None
         raw_path = self.DATABASE_URL.replace("sqlite:///", "")
         if raw_path == ":memory:":
             return None
@@ -82,6 +86,9 @@ class Settings(BaseSettings):
             "storage_dir": self.STORAGE_DIR,
             "log_level": self.LOG_LEVEL,
             "log_format": self.LOG_FORMAT,
+            "llm_provider": "ollama",
+            "llm_model": self.OLLAMA_MODEL,
+            "llm_base_url": self.OLLAMA_BASE_URL,
             "pipeline_stages": [
                 {
                     "stage_id": "core_foundation",
@@ -114,9 +121,9 @@ class Settings(BaseSettings):
                 {
                     "stage_id": "resume_tailoring",
                     "name": "Phase 5: JD Analysis & Resume Tailoring",
-                    "status": "planned",
-                    "description": "Dynamic resume tailoring, cover letter generation, fit scoring",
-                    "active": False,
+                    "status": "ready",
+                    "description": "Deep JD analysis, skill gap matching, fit scoring, and grounded resume/cover letter tailoring via local Ollama (qwen3:8b)",
+                    "active": True,
                 },
                 {
                     "stage_id": "browser_preparation",

@@ -1,6 +1,6 @@
 # AI Job Application Agent — Operations & API Reference Guide
 
-This operational manual documents how to start, stop, monitor, and interact with the **AI Job Application Agent** services, including detailed API endpoints, health probes, Candidate Profile endpoints, Normalized Job Database endpoints, and Source-Agnostic Job Discovery endpoints.
+This operational manual documents how to start, stop, monitor, and interact with the **AI Job Application Agent** services, including detailed API endpoints, health probes, Candidate Profile endpoints, Normalized Job Database endpoints, Source-Agnostic Job Discovery endpoints, and Local LLM (Ollama) JD Analysis & Resume Tailoring.
 
 ---
 
@@ -9,6 +9,7 @@ This operational manual documents how to start, stop, monitor, and interact with
 The system consists of two primary services:
 1. **Backend**: Python 3.12+ FastAPI server (Default: `http://127.0.0.1:8000`)
 2. **Frontend**: React + TypeScript Vite dashboard (Default: `http://127.0.0.1:5173`)
+3. **Local LLM**: Ollama daemon on Apple Silicon GPU (Default: `http://127.0.0.1:11434`, Model: `qwen3:8b`)
 
 ### A. Quick Commands
 
@@ -87,33 +88,74 @@ curl -X GET http://127.0.0.1:8000/health
 ```
 
 #### 2. Liveness Probe (`GET /health/live`)
-Ultra-lightweight ping probe for load balancers without DB queries.
-
 ```bash
 curl -X GET http://127.0.0.1:8000/health/live
 ```
 
 #### 3. Readiness Probe (`GET /health/ready`)
-Traffic gating probe returning `HTTP 200 OK` or `HTTP 503 Service Unavailable`.
-
 ```bash
 curl -X GET http://127.0.0.1:8000/health/ready
 ```
 
 ---
 
-### B. Phase 4: Source-Agnostic Job Discovery Framework & Orchestration
+### B. Phase 5: Local LLM JD Analysis & Resume Tailoring (Ollama `qwen3:8b`)
+
+#### 1. Check Local LLM Status (`GET /api/v1/llm/status`)
+Checks connectivity to local Ollama server, verifies `qwen3:8b` model availability, and measures inference latency.
+
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/llm/status
+```
+
+#### 2. Analyze Job Description (`POST /api/v1/jobs/{job_id}/analyze`)
+Analyzes job requirements against verified candidate profile facts without hallucination.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/jobs/1/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "custom_instructions": "Focus evaluation on distributed consensus experience"
+  }'
+```
+
+#### 3. Get Job Analysis (`GET /api/v1/jobs/{job_id}/analysis`)
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/jobs/1/analysis
+```
+
+#### 4. Tailor Resume & Cover Letter (`POST /api/v1/jobs/{job_id}/tailor`)
+Synthesizes a tailored executive summary, prioritized experience highlights, persuasive cover letter, and complete ATS Markdown resume grounded strictly in verified profile facts.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/jobs/1/tailor \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tone": "professional",
+    "custom_instructions": "Emphasize high-throughput distributed database architecture"
+  }'
+```
+
+#### 5. Get Tailored Resume for Job (`GET /api/v1/jobs/{job_id}/tailored-resume`)
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/jobs/1/tailored-resume
+```
+
+#### 6. List All Tailored Resumes (`GET /api/v1/tailored-resumes`)
+```bash
+curl -X GET "http://127.0.0.1:8000/api/v1/tailored-resumes?page=1&page_size=20"
+```
+
+---
+
+### C. Phase 4: Source-Agnostic Job Discovery Framework & Orchestration
 
 #### 1. List Registered Adapters (`GET /api/v1/discovery/adapters`)
-Lists all discovery adapters, rate limits, reliability, and capabilities.
-
 ```bash
 curl -X GET http://127.0.0.1:8000/api/v1/discovery/adapters
 ```
 
 #### 2. Launch Discovery Run (`POST /api/v1/discovery/run`)
-Executes an on-demand multi-source job discovery run with rate-limiting, retries, and automatic ingestion into the Phase 3 Job Database.
-
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/discovery/run \
   -H "Content-Type: application/json" \
@@ -129,30 +171,14 @@ curl -X POST http://127.0.0.1:8000/api/v1/discovery/run \
   }'
 ```
 
-#### 3. List Discovery Runs & Audit Trail (`GET /api/v1/discovery/runs`)
+#### 3. List Discovery Runs (`GET /api/v1/discovery/runs`)
 ```bash
 curl -X GET http://127.0.0.1:8000/api/v1/discovery/runs
 ```
 
-#### 4. Save Search Profile (`POST /api/v1/discovery/search-profiles`)
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/discovery/search-profiles \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Senior Distributed Backend",
-    "description": "High-priority remote backend roles",
-    "criteria": {
-      "keywords": ["Distributed Systems", "Go", "Python"],
-      "remote_only": true,
-      "sources": ["greenhouse", "lever", "remote_tech"]
-    },
-    "is_active": true
-  }'
-```
-
 ---
 
-### C. Phase 3: Normalized Job Database & Ingestion Endpoints
+### D. Phase 3: Normalized Job Database & Ingestion Endpoints
 
 #### 1. List & Filter Normalized Jobs (`GET /api/v1/jobs`)
 ```bash
@@ -188,20 +214,9 @@ curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/csv \
   }'
 ```
 
-#### 4. Upload & Ingest Job File (`POST /api/v1/jobs/ingest/file`)
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/file \
-  -F "file=@/path/to/jobs.csv"
-```
-
-#### 5. Seed Built-in Sample Fixtures (`POST /api/v1/jobs/ingest/seed-fixtures`)
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/seed-fixtures
-```
-
 ---
 
-### D. Phase 2: Candidate Profile & Ground Truth Endpoints
+### E. Phase 2: Candidate Profile & Ground Truth Endpoints
 
 #### 1. Primary Candidate Profile (`GET /api/v1/profile`)
 ```bash
@@ -217,7 +232,7 @@ curl -X GET http://127.0.0.1:8000/api/v1/profile/1/verified-context
 
 ---
 
-### E. Interactive Documentation UIs
+### F. Interactive Documentation UIs
 
 - **Swagger UI (OpenAPI Interactive Explorer)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **ReDoc UI**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
@@ -230,7 +245,7 @@ curl -X GET http://127.0.0.1:8000/api/v1/profile/1/verified-context
 Database files and migrations are managed via **Alembic**:
 
 ```bash
-# Run latest database migrations (Applies 0001, 0002, 0003, and 0004)
+# Run latest database migrations (Applies 0001, 0002, 0003, 0004, and 0005)
 make migrate
 # OR: ./scripts/migrate.sh
 

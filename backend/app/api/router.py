@@ -5,6 +5,8 @@ from app.api.v1.config import router as config_router
 from app.api.v1.jobs import router as jobs_router
 from app.api.v1.companies import router as companies_router
 from app.api.v1.discovery import router as discovery_router
+from app.api.v1.analysis import router as analysis_router
+from app.api.v1.tailoring import router as tailoring_router
 from app.api.v1.applications import router as applications_router
 from app.api.v1.resumes import router as resumes_router
 from app.api.v1.profile import router as profile_router
@@ -28,3 +30,7 @@ api_v1_router.include_router(companies_router)
 
 # Phase 4 Source-Agnostic Job Discovery Framework
 api_v1_router.include_router(discovery_router)
+
+# Phase 5 Local LLM JD Analysis & Resume Tailoring
+api_v1_router.include_router(analysis_router)
+api_v1_router.include_router(tailoring_router)

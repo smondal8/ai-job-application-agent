@@ -53,6 +53,9 @@ export interface SystemConfigResponse {
   storage_dir: string;
   log_level: string;
   log_format: string;
+  llm_provider?: string;
+  llm_model?: string;
+  llm_base_url?: string;
   pipeline_stages: PipelineStageInfo[];
 }
 
@@ -71,6 +74,70 @@ export interface APIErrorResponse {
     request_id?: string;
     timestamp: string;
   };
+}
+
+// --- Phase 5: Local LLM JD Analysis & Resume Tailoring Types ---
+
+export interface LLMStatusResponse {
+  provider: string;
+  status: 'connected' | 'disconnected' | 'degraded';
+  base_url: string;
+  active_model: string;
+  is_active_model_available: boolean;
+  available_models: string[];
+  latency_ms: number;
+  error?: string | null;
+}
+
+export interface JobAnalysis {
+  id: number;
+  job_id: number;
+  candidate_profile_id?: number | null;
+  fit_score?: number | null;
+  fit_level?: 'high' | 'medium' | 'low' | null;
+  summary?: string | null;
+  role_summary?: string | null;
+  key_responsibilities: string[];
+  matched_skills: string[];
+  missing_skills: string[];
+  required_qualifications: string[];
+  preferred_qualifications: string[];
+  keywords: string[];
+  model_used?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TailoredResume {
+  id: number;
+  job_id: number;
+  candidate_profile_id?: number | null;
+  base_resume_id?: number | null;
+  tailored_summary?: string | null;
+  tailored_experience: Array<{
+    company: string;
+    position: string;
+    start_date: string;
+    end_date?: string | null;
+    is_current: boolean;
+    tailored_highlights: string[];
+  }>;
+  highlighted_skills: string[];
+  cover_letter?: string | null;
+  markdown_content?: string | null;
+  diff_summary?: string | null;
+  model_used?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TailoredResumeListResponse {
+  items: TailoredResume[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 // --- Phase 4: Job Discovery & Adapter Types ---

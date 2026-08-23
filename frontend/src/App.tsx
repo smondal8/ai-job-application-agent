@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, NavTab } from './components/Sidebar';
 import { HealthStatusCard } from './components/HealthStatusCard';
+import { AnalysisAndTailoringView } from './components/AnalysisAndTailoringView';
 import { JobDiscoveryView } from './components/JobDiscoveryView';
 import { JobDatabaseView } from './components/JobDatabaseView';
 import { CandidateProfileView } from './components/CandidateProfileView';
@@ -11,7 +12,7 @@ import { SystemConfigCard } from './components/SystemConfigCard';
 import { ErrorLab } from './components/ErrorLab';
 import { api } from './services/api';
 import { HealthResponse, SystemConfigResponse, PipelineStageInfo } from './types';
-import { ArrowRight, UserCheck, Briefcase, Compass } from 'lucide-react';
+import { ArrowRight, UserCheck, Briefcase, Compass, Brain } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -69,7 +70,24 @@ export const App: React.FC = () => {
               <HealthStatusCard health={health} loading={loading} error={error} />
 
               {/* Highlights Grid */}
-              <div className="grid-3">
+              <div className="grid-4">
+                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('tailoring')}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#c084fc' }}>
+                      <Brain size={18} />
+                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>JD Analysis & Tailoring</h4>
+                    </div>
+                    <span className="badge badge-purple">Phase 5 Active</span>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Local Ollama LLM (qwen3:8b) for deep JD fit scoring and grounded resume/cover letter tailoring.
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#c084fc', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
+                    <span>Open AI Studio</span>
+                    <ArrowRight size={12} />
+                  </div>
+                </div>
+
                 <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('discovery')}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8' }}>
@@ -124,6 +142,7 @@ export const App: React.FC = () => {
             </div>
           )}
 
+          {activeTab === 'tailoring' && <AnalysisAndTailoringView />}
           {activeTab === 'discovery' && <JobDiscoveryView />}
           {activeTab === 'jobs' && <JobDatabaseView />}
           {activeTab === 'profile' && <CandidateProfileView />}

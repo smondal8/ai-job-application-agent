@@ -4,7 +4,7 @@ import {
   UserCheck,
   Briefcase,
   Compass,
-  FileText,
+  Brain,
   Globe,
   Code,
 } from 'lucide-react';
@@ -15,7 +15,7 @@ interface PipelineOverviewProps {
 }
 
 export const PipelineOverview: React.FC<PipelineOverviewProps> = () => {
-  const [selectedStage, setSelectedStage] = useState<string>('job_discovery');
+  const [selectedStage, setSelectedStage] = useState<string>('resume_tailoring');
 
   const stageDetails: Record<
     string,
@@ -95,7 +95,7 @@ interface JobIngestionBatchResponse {
     },
     job_discovery: {
       title: 'Job Discovery & Orchestration',
-      phase: 'Phase 4 (Active)',
+      phase: 'Phase 4 (Complete)',
       icon: <Compass size={24} color="#38bdf8" />,
       status: 'active',
       description:
@@ -117,19 +117,25 @@ interface DiscoveryRunResponse {
     },
     resume_tailoring: {
       title: 'JD Analysis & Resume Tailoring',
-      phase: 'Phase 5 (Planned)',
-      icon: <FileText size={24} color="#f59e0b" />,
-      status: 'planned',
+      phase: 'Phase 5 (Active)',
+      icon: <Brain size={24} color="#c084fc" />,
+      status: 'active',
       description:
-        'Analyzes job descriptions against verified candidate facts and dynamically tailors resumes, cover letters, and match fit scores without hallucination.',
-      inputs: ['Verified Ground Truth Resume', 'Job Description (description_raw)'],
-      outputs: ['TailoredResume record', 'Cover Letter', 'Fit Score (0-100)'],
-      tables: ['job_analyses', 'resumes', 'tailored_resumes'],
-      contract: `interface ResumeTailoringContract {
+        'Local LLM inference via Ollama (qwen3:8b) on Apple Silicon GPU. Performs objective JD analysis, skill gap matching, and grounded resume/cover letter tailoring strictly using verified candidate facts.',
+      inputs: ['Authoritative Candidate Ground Truth Context', 'Job Description (description_clean/raw)'],
+      outputs: ['JobAnalysis (fit score, matched/missing skills)', 'TailoredResume (ATS Markdown & Cover Letter)'],
+      tables: ['job_analyses', 'tailored_resumes', 'audit_logs'],
+      contract: `// Phase 5 LLM Tailoring Contract
+interface TailoredResumeResponse {
   job_id: number;
-  fit_score: number;
+  candidate_profile_id: number;
   tailored_summary: string;
+  tailored_experience: Array<{ company: string; position: string; tailored_highlights: string[] }>;
   highlighted_skills: string[];
+  cover_letter: string;
+  markdown_content: string;
+  model_used: string;
+  status: 'ready_for_review';
 }`,
     },
     browser_preparation: {
@@ -149,7 +155,7 @@ interface DiscoveryRunResponse {
     },
   };
 
-  const currentDetail = stageDetails[selectedStage] || stageDetails['job_discovery'];
+  const currentDetail = stageDetails[selectedStage] || stageDetails['resume_tailoring'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -158,7 +164,7 @@ interface DiscoveryRunResponse {
           End-to-End Pipeline Architecture
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 4 provides the source-agnostic discovery framework.
+          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 5 delivers local Ollama LLM JD analysis and grounded tailoring.
         </p>
       </div>
 
@@ -185,8 +191,8 @@ interface DiscoveryRunResponse {
                 cursor: 'pointer',
                 borderRadius: '8px',
                 padding: '1rem',
-                border: `1px solid ${isSelected ? '#38bdf8' : isActive ? '#10b981' : 'var(--border-color)'}`,
-                backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.1)' : isActive ? 'rgba(16, 185, 129, 0.12)' : '#131b2e',
+                border: `1px solid ${isSelected ? '#c084fc' : isActive ? '#10b981' : 'var(--border-color)'}`,
+                backgroundColor: isSelected ? 'rgba(192, 132, 252, 0.1)' : isActive ? 'rgba(16, 185, 129, 0.12)' : '#131b2e',
                 transition: 'all 0.2s',
               }}
             >
@@ -221,14 +227,14 @@ interface DiscoveryRunResponse {
       </div>
 
       {/* Selected Stage Deep-Dive Card */}
-      <div className="card" style={{ borderTop: `3px solid ${currentDetail.status === 'active' ? '#38bdf8' : '#64748b'}` }}>
+      <div className="card" style={{ borderTop: `3px solid ${currentDetail.status === 'active' ? '#c084fc' : '#64748b'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {currentDetail.icon}
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{currentDetail.title}</h3>
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                <span className="badge badge-blue">{currentDetail.phase}</span>
+                <span className="badge badge-purple">{currentDetail.phase}</span>
                 <span className={`badge ${currentDetail.status === 'active' ? 'badge-green' : 'badge-gray'}`}>
                   Status: {currentDetail.status.toUpperCase()}
                 </span>

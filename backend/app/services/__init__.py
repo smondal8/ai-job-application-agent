@@ -5,6 +5,9 @@ from app.services.job_dedup_service import job_dedup_service, JobDeduplicationSe
 from app.services.job_ingestion_service import job_ingestion_service, JobIngestionService
 from app.services.discovery.registry import discovery_registry, DiscoveryAdapterRegistry
 from app.services.discovery.orchestrator import discovery_orchestrator, DiscoveryOrchestrationService
+from app.services.llm.ollama_service import ollama_service, OllamaLLMService
+from app.services.jd_analysis_service import jd_analysis_service, JDAnalysisService
+from app.services.resume_tailoring_service import resume_tailoring_service, ResumeTailoringService
 
 __all__ = [
     "storage_service",
@@ -21,4 +24,10 @@ __all__ = [
     "DiscoveryAdapterRegistry",
     "discovery_orchestrator",
     "DiscoveryOrchestrationService",
+    "ollama_service",
+    "OllamaLLMService",
+    "jd_analysis_service",
+    "JDAnalysisService",
+    "resume_tailoring_service",
+    "ResumeTailoringService",
 ]

@@ -41,11 +41,17 @@ def test_settings_public_config():
     assert phase4["status"] == "ready"
     assert phase4["active"] is True
 
-    # Verify Phase 5 is planned
+    # Verify Phase 5 is ready and active
     phase5 = public_config["pipeline_stages"][4]
     assert phase5["stage_id"] == "resume_tailoring"
-    assert phase5["status"] == "planned"
-    assert phase5["active"] is False
+    assert phase5["status"] == "ready"
+    assert phase5["active"] is True
+
+    # Verify Phase 6 is planned
+    phase6 = public_config["pipeline_stages"][5]
+    assert phase6["stage_id"] == "browser_preparation"
+    assert phase6["status"] == "planned"
+    assert phase6["active"] is False
 
 
 def test_sqlite_db_path_handling():
