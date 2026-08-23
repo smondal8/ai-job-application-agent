@@ -67,6 +67,7 @@ from app.schemas.analysis import (
     LLMStatusResponse,
     JobAnalysisRequest,
     JobAnalysisResponse,
+    JobAnalysisListResponse,
 )
 from app.schemas.tailoring import (
     ResumeTailoringRequest,
@@ -132,6 +133,7 @@ __all__ = [
     "LLMStatusResponse",
     "JobAnalysisRequest",
     "JobAnalysisResponse",
+    "JobAnalysisListResponse",
     "ResumeTailoringRequest",
     "TailoredResumeResponse",
     "TailoredResumeListResponse",

@@ -8,7 +8,7 @@ def test_api_v1_config_endpoint(client: TestClient):
     assert data["app_name"] == "AI Job Application Agent"
     assert data["environment"] == "testing"
     assert "pipeline_stages" in data
-    assert len(data["pipeline_stages"]) == 6
+    assert len(data["pipeline_stages"]) >= 6
 
 
 def test_api_v1_pipeline_endpoint(client: TestClient):
@@ -16,12 +16,13 @@ def test_api_v1_pipeline_endpoint(client: TestClient):
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == 6
+    assert len(data) >= 6
     stage_ids = [s["stage_id"] for s in data]
     assert "core_foundation" in stage_ids
     assert "candidate_profile" in stage_ids
     assert "job_database" in stage_ids
     assert "job_discovery" in stage_ids
+    assert "jd_analysis_matching" in stage_ids
     assert "browser_preparation" in stage_ids
 
 

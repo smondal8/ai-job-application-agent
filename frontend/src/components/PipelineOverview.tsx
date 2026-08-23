@@ -5,6 +5,7 @@ import {
   Briefcase,
   Compass,
   Brain,
+  FileText,
   Globe,
   Code,
 } from 'lucide-react';
@@ -15,7 +16,7 @@ interface PipelineOverviewProps {
 }
 
 export const PipelineOverview: React.FC<PipelineOverviewProps> = () => {
-  const [selectedStage, setSelectedStage] = useState<string>('resume_tailoring');
+  const [selectedStage, setSelectedStage] = useState<string>('jd_analysis_matching');
 
   const stageDetails: Record<
     string,
@@ -115,33 +116,54 @@ interface DiscoveryRunResponse {
   adapter_logs: Array<{ adapter: string; status: string; discovered_count: number }>;
 }`,
     },
-    resume_tailoring: {
-      title: 'JD Analysis & Resume Tailoring',
+    jd_analysis_matching: {
+      title: 'Structured JD Analysis & Candidate Matching',
       phase: 'Phase 5 (Active)',
       icon: <Brain size={24} color="#c084fc" />,
       status: 'active',
       description:
-        'Local LLM inference via Ollama (qwen3:8b) on Apple Silicon GPU. Performs objective JD analysis, skill gap matching, and grounded resume/cover letter tailoring strictly using verified candidate facts.',
-      inputs: ['Authoritative Candidate Ground Truth Context', 'Job Description (description_clean/raw)'],
-      outputs: ['JobAnalysis (fit score, matched/missing skills)', 'TailoredResume (ATS Markdown & Cover Letter)'],
-      tables: ['job_analyses', 'tailored_resumes', 'audit_logs'],
-      contract: `// Phase 5 LLM Tailoring Contract
-interface TailoredResumeResponse {
+        'Prompt-injection safe structured output pipeline using local Ollama (qwen3:8b) on Apple Silicon GPU. Combines deterministic keyword matching and deep semantic evaluation for objective fit scoring (0-100%).',
+      inputs: ['Untrusted Job Description (Isolated in sandbox)', 'Authoritative Verified Candidate Facts'],
+      outputs: ['JobAnalysis (Composite Fit Score, Matched/Missing Skills Matrix, Recommendations)'],
+      tables: ['job_analyses', 'audit_logs'],
+      contract: `// Phase 5 JD Analysis & Matching Contract
+interface JobAnalysisResponse {
   job_id: number;
   candidate_profile_id: number;
-  tailored_summary: string;
-  tailored_experience: Array<{ company: string; position: string; tailored_highlights: string[] }>;
-  highlighted_skills: string[];
-  cover_letter: string;
-  markdown_content: string;
+  fit_score: number; // 0.0 - 100.0 (Composite)
+  deterministic_score: number;
+  semantic_score: number;
+  fit_level: 'high' | 'medium' | 'low';
+  recommendation: 'strong_apply' | 'apply' | 'stretch' | 'skip';
+  summary: string;
+  role_summary: string;
+  key_responsibilities: string[];
+  matched_skills: string[];
+  missing_skills: string[];
+  keywords: string[];
   model_used: string;
-  status: 'ready_for_review';
+}`,
+    },
+    resume_tailoring: {
+      title: 'Resume & Cover Letter Tailoring',
+      phase: 'Phase 6 (Planned)',
+      icon: <FileText size={24} color="#a855f7" />,
+      status: 'planned',
+      description:
+        'Grounded resume tailoring and personalized cover letter generation strictly from verified candidate facts.',
+      inputs: ['JobAnalysis Artifact', 'Verified Candidate Facts'],
+      outputs: ['Tailored Resume (PDF/Markdown)', 'Personalized Cover Letter'],
+      tables: ['tailored_resumes', 'audit_logs'],
+      contract: `interface TailoredResumeContract {
+  job_id: number;
+  markdown_content: string;
+  cover_letter: string;
 }`,
     },
     browser_preparation: {
-      title: 'Human Review & Portal Submission',
-      phase: 'Phase 6 (Planned)',
-      icon: <Globe size={24} color="#a855f7" />,
+      title: 'Human Approval & Browser Submission',
+      phase: 'Phase 7 (Planned)',
+      icon: <Globe size={24} color="#94a3b8" />,
       status: 'planned',
       description:
         'Application approval queue and assisted portal navigation with final human confirmation gate before submission.',
@@ -155,7 +177,7 @@ interface TailoredResumeResponse {
     },
   };
 
-  const currentDetail = stageDetails[selectedStage] || stageDetails['resume_tailoring'];
+  const currentDetail = stageDetails[selectedStage] || stageDetails['jd_analysis_matching'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -164,7 +186,7 @@ interface TailoredResumeResponse {
           End-to-End Pipeline Architecture
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 5 delivers local Ollama LLM JD analysis and grounded tailoring.
+          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 5 delivers prompt-isolated structured JD analysis and dual deterministic/semantic candidate matching.
         </p>
       </div>
 
@@ -173,7 +195,7 @@ interface TailoredResumeResponse {
         className="card"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '0.75rem',
           padding: '1.5rem 1rem',
           backgroundColor: '#0b1120',

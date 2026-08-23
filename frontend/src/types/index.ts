@@ -76,7 +76,7 @@ export interface APIErrorResponse {
   };
 }
 
-// --- Phase 5: Local LLM JD Analysis & Resume Tailoring Types ---
+// --- Phase 5: Local LLM JD Analysis & Candidate Matching Types ---
 
 export interface LLMStatusResponse {
   provider: string;
@@ -94,7 +94,10 @@ export interface JobAnalysis {
   job_id: number;
   candidate_profile_id?: number | null;
   fit_score?: number | null;
+  deterministic_score?: number | null;
+  semantic_score?: number | null;
   fit_level?: 'high' | 'medium' | 'low' | null;
+  recommendation?: 'strong_apply' | 'apply' | 'stretch' | 'skip' | null;
   summary?: string | null;
   role_summary?: string | null;
   key_responsibilities: string[];
@@ -103,38 +106,16 @@ export interface JobAnalysis {
   required_qualifications: string[];
   preferred_qualifications: string[];
   keywords: string[];
+  red_flags: string[];
   model_used?: string | null;
+  analysis_metadata?: Record<string, any> | null;
   status: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface TailoredResume {
-  id: number;
-  job_id: number;
-  candidate_profile_id?: number | null;
-  base_resume_id?: number | null;
-  tailored_summary?: string | null;
-  tailored_experience: Array<{
-    company: string;
-    position: string;
-    start_date: string;
-    end_date?: string | null;
-    is_current: boolean;
-    tailored_highlights: string[];
-  }>;
-  highlighted_skills: string[];
-  cover_letter?: string | null;
-  markdown_content?: string | null;
-  diff_summary?: string | null;
-  model_used?: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TailoredResumeListResponse {
-  items: TailoredResume[];
+export interface JobAnalysisListResponse {
+  items: JobAnalysis[];
   total: number;
   page: number;
   page_size: number;

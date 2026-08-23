@@ -17,8 +17,7 @@ import {
   SearchProfileListResponse,
   LLMStatusResponse,
   JobAnalysis,
-  TailoredResume,
-  TailoredResumeListResponse,
+  JobAnalysisListResponse,
   APIErrorResponse,
   CandidateProfile,
   WorkExperience,
@@ -105,7 +104,7 @@ export const api = {
     return handleResponse<any>(res);
   },
 
-  // --- Phase 5: Local LLM JD Analysis & Resume Tailoring ---
+  // --- Phase 5: Local LLM JD Analysis & Candidate Matching ---
   async getLLMStatus(): Promise<LLMStatusResponse> {
     const res = await fetch(`${API_BASE}/llm/status`);
     return handleResponse<LLMStatusResponse>(res);
@@ -125,33 +124,25 @@ export const api = {
     return handleResponse<JobAnalysis>(res);
   },
 
-  async tailorResume(jobId: number, payload?: {
-    candidate_profile_id?: number;
-    tone?: string;
-    target_role_title?: string;
-    custom_instructions?: string;
-  }): Promise<TailoredResume> {
-    const res = await fetch(`${API_BASE}/jobs/${jobId}/tailor`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload || {}),
-    });
-    return handleResponse<TailoredResume>(res);
+  async getJobAnalyses(params: {
+    page?: number;
+    page_size?: number;
+    fit_level?: string;
+    recommendation?: string;
+  } = {}): Promise<JobAnalysisListResponse> {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page.toString());
+    if (params.page_size) query.append('page_size', params.page_size.toString());
+    if (params.fit_level && params.fit_level !== 'all') query.append('fit_level', params.fit_level);
+    if (params.recommendation && params.recommendation !== 'all') query.append('recommendation', params.recommendation);
+
+    const res = await fetch(`${API_BASE}/analyses?${query.toString()}`);
+    return handleResponse<JobAnalysisListResponse>(res);
   },
 
-  async getJobTailoredResume(jobId: number): Promise<TailoredResume> {
-    const res = await fetch(`${API_BASE}/jobs/${jobId}/tailored-resume`);
-    return handleResponse<TailoredResume>(res);
-  },
-
-  async getTailoredResumes(page: number = 1, pageSize: number = 20): Promise<TailoredResumeListResponse> {
-    const res = await fetch(`${API_BASE}/tailored-resumes?page=${page}&page_size=${pageSize}`);
-    return handleResponse<TailoredResumeListResponse>(res);
-  },
-
-  async getTailoredResumeById(id: number): Promise<TailoredResume> {
-    const res = await fetch(`${API_BASE}/tailored-resumes/${id}`);
-    return handleResponse<TailoredResume>(res);
+  async getAnalysisById(id: number): Promise<JobAnalysis> {
+    const res = await fetch(`${API_BASE}/analyses/${id}`);
+    return handleResponse<JobAnalysis>(res);
   },
 
   // --- Phase 4: Job Discovery Framework ---

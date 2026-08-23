@@ -2,24 +2,30 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.errors import AppError, NotFoundError, BadRequestError
+from app.core.errors import NotFoundError, BadRequestError, AppError
 from app.core.logging import get_logger
 from app.models.job import Job
 from app.models.candidate import CandidateProfile
 from app.models.analysis import JobAnalysis
 from app.models.audit import AuditLog
-from app.services.llm.ollama_service import ollama_service, OllamaLLMService
 from app.services.profile_service import profile_service
+from app.services.matching.deterministic import deterministic_matcher, DeterministicMatcher
+from app.services.matching.semantic import semantic_matcher, SemanticMatcher
 
 logger = get_logger("app.services.jd_analysis")
 settings = get_settings()
 
 
 class JDAnalysisService:
-    """Service for deep Job Description analysis and candidate alignment using local Ollama LLM."""
+    """Orchestrates deterministic & LLM semantic matching for deep job description analysis."""
 
-    def __init__(self, llm_provider: Optional[OllamaLLMService] = None):
-        self.llm = llm_provider or ollama_service
+    def __init__(
+        self,
+        det_matcher: Optional[DeterministicMatcher] = None,
+        sem_matcher: Optional[SemanticMatcher] = None,
+    ):
+        self.det_matcher = det_matcher or deterministic_matcher
+        self.sem_matcher = sem_matcher or semantic_matcher
 
     async def analyze_job(
         self,
@@ -28,7 +34,7 @@ class JDAnalysisService:
         candidate_profile_id: Optional[int] = None,
         custom_instructions: Optional[str] = None,
     ) -> JobAnalysis:
-        """Perform structured AI analysis of a job listing against verified candidate facts."""
+        """Execute strict structured output pipeline for JD analysis and candidate matching."""
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             raise NotFoundError(f"Job listing with ID {job_id} not found.")
@@ -46,96 +52,70 @@ class JDAnalysisService:
         # 2. Retrieve verified ground truth context (Strict anti-hallucination boundary)
         ground_truth = profile_service.get_verified_ground_truth_context(db, profile.id)
         candidate_context_md = ground_truth["formatted_llm_prompt_context"]
+        candidate_skills = ground_truth.get("skills", [])
 
-        # 3. Construct system prompt & user prompt
-        system_prompt = (
-            "You are an expert technical recruiter and talent evaluator for software and engineering roles. "
-            "Your task is to perform an objective, deep analysis of a job description and evaluate how well "
-            "the candidate matches the role based STRICTLY on their verified profile. "
-            "RULES:\n"
-            "1. NEVER fabricate, assume, or invent skills, degrees, or experiences that are not in the Candidate Ground Truth.\n"
-            "2. Matched skills must ONLY contain skills the candidate actually has verified.\n"
-            "3. Missing skills should list important skills or requirements mentioned in the JD that the candidate lacks.\n"
-            "4. Calculate an objective fit_score between 0 and 100 based on technical match, seniority, and responsibilities.\n"
-            "5. Output valid JSON matching the requested schema exactly."
+        # 3. Deterministic Matching Phase
+        job_dict = {
+            "title": job.title,
+            "company": job.company,
+            "location": job.location,
+            "remote_type": job.remote_type,
+            "department": job.department,
+            "skills_raw": job.skills_raw or [],
+            "description_clean": job.description_clean,
+            "description_raw": job.description_raw,
+            "experience_years_min": job.experience_years_min,
+            "experience_years_max": job.experience_years_max,
+        }
+
+        matched_det, missing_det, det_score = self.det_matcher.match_skills(
+            candidate_skills=candidate_skills,
+            job_skills_raw=job.skills_raw or [],
+            job_description_text=job.description_clean or job.description_raw or job.title,
+        )
+        criteria_eval = self.det_matcher.evaluate_criteria(
+            candidate_facts=ground_truth,
+            job_data=job_dict,
         )
 
-        user_prompt = f"""
-### JOB LISTING DETAILS:
-- **Title**: {job.title}
-- **Company**: {job.company}
-- **Location**: {job.location or 'Unspecified'}
-- **Remote Policy**: {job.remote_type or 'Unspecified'}
-- **Department**: {job.department or 'Unspecified'}
-- **Seniority**: {job.seniority_level or 'Unspecified'}
-- **Raw Skills / Tags**: {', '.join(job.skills_raw or [])}
-
-### JOB DESCRIPTION:
-{job.description_clean or job.description_raw or 'No full description provided. Evaluate based on title and metadata.'}
-
----
-
-{candidate_context_md}
-
----
-{f'### ADDITIONAL EVALUATION INSTRUCTIONS:\n{custom_instructions}' if custom_instructions else ''}
-
-Please evaluate the candidate against this job description and return a JSON object with this exact structure:
-{{
-  "fit_score": <number between 0 and 100, e.g. 85>,
-  "fit_level": <"high" | "medium" | "low">,
-  "summary": <string: 2-3 sentences evaluating why this is or is not a strong match>,
-  "role_summary": <string: 1-2 sentences summarizing the core focus of the role>,
-  "key_responsibilities": [<string: responsibility 1>, <string: responsibility 2>, ...],
-  "matched_skills": [<string: verified skill 1>, <string: verified skill 2>, ...],
-  "missing_skills": [<string: missing skill or requirement 1>, ...],
-  "required_qualifications": [<string: mandatory requirement 1>, ...],
-  "preferred_qualifications": [<string: preferred requirement 1>, ...],
-  "keywords": [<string: high-signal ATS keywords extracted from JD>]
-}}
-"""
-
-        # 4. Invoke Ollama model
+        # 4. Semantic Matching Phase (Local Ollama LLM with prompt injection defense)
         logger.info(
-            "Executing JD Analysis for job %d (%s) with candidate profile %d using model %s",
+            "Running semantic matching for job %d (%s) with candidate %d using %s",
             job.id,
             job.title,
             profile.id,
-            self.llm.model,
+            settings.OLLAMA_MODEL,
         )
 
-        fallback_response = {
-            "fit_score": 50.0,
-            "fit_level": "medium",
-            "summary": f"Automated analysis completed for {job.title} at {job.company}.",
-            "role_summary": f"Role for {job.title}.",
-            "key_responsibilities": [],
-            "matched_skills": [s["name"] for s in ground_truth.get("skills", [])[:5]],
-            "missing_skills": [],
-            "required_qualifications": [],
-            "preferred_qualifications": [],
-            "keywords": job.skills_raw or [],
-        }
+        semantic_res = await self.sem_matcher.evaluate(
+            job_data=job_dict,
+            candidate_ground_truth_md=candidate_context_md,
+            custom_instructions=custom_instructions,
+        )
 
-        try:
-            analysis_data = await self.llm.generate_structured_json(
-                prompt=user_prompt,
-                system_prompt=system_prompt,
-                fallback_default=fallback_response,
+        sem_score = float(semantic_res.get("semantic_match_score", 50.0))
+
+        # 5. Calculate Weighted Composite Fit Score & Recommendation
+        # 40% deterministic keyword/criteria match + 60% semantic domain/experience reasoning
+        composite_fit_score = round((0.40 * det_score) + (0.60 * sem_score), 1)
+        composite_fit_score = max(0.0, min(100.0, composite_fit_score))
+
+        fit_level = "high" if composite_fit_score >= 75.0 else "medium" if composite_fit_score >= 50.0 else "low"
+        
+        recommendation = semantic_res.get("recommendation")
+        if not recommendation or recommendation not in ["strong_apply", "apply", "stretch", "skip"]:
+            recommendation = (
+                "strong_apply" if composite_fit_score >= 85.0
+                else "apply" if composite_fit_score >= 70.0
+                else "stretch" if composite_fit_score >= 50.0
+                else "skip"
             )
-        except Exception as exc:
-            logger.error("LLM analysis failed: %s", exc)
-            raise AppError(f"Job description analysis failed: {exc}", status_code=502)
 
-        # 5. Extract and normalize fields
-        fit_score = float(analysis_data.get("fit_score", 50.0))
-        fit_score = max(0.0, min(100.0, fit_score))
+        # Combine matched skills (union)
+        combined_matched = sorted(list(set(matched_det + (semantic_res.get("matched_skills") or []))))
+        combined_missing = sorted(list(set(missing_det + (semantic_res.get("missing_skills") or []))))
 
-        fit_level = analysis_data.get("fit_level")
-        if not fit_level or fit_level not in ["high", "medium", "low"]:
-            fit_level = "high" if fit_score >= 75 else "medium" if fit_score >= 50 else "low"
-
-        # 6. Save or update JobAnalysis record
+        # 6. Save or Update JobAnalysis in DB
         analysis = (
             db.query(JobAnalysis)
             .filter(JobAnalysis.job_id == job.id, JobAnalysis.candidate_profile_id == profile.id)
@@ -153,39 +133,48 @@ Please evaluate the candidate against this job description and return a JSON obj
             db.add(analysis)
 
         analysis.candidate_profile_id = profile.id
-        analysis.fit_score = fit_score
+        analysis.fit_score = composite_fit_score
+        analysis.deterministic_score = det_score
+        analysis.semantic_score = sem_score
         analysis.fit_level = fit_level
-        analysis.summary = analysis_data.get("summary")
-        analysis.role_summary = analysis_data.get("role_summary")
-        analysis.key_responsibilities = analysis_data.get("key_responsibilities", [])
-        analysis.matched_skills = analysis_data.get("matched_skills", [])
-        analysis.missing_skills = analysis_data.get("missing_skills", [])
-        analysis.required_qualifications = analysis_data.get("required_qualifications", [])
-        analysis.preferred_qualifications = analysis_data.get("preferred_qualifications", [])
-        analysis.keywords = analysis_data.get("keywords", [])
-        analysis.model_used = self.llm.model
+        analysis.recommendation = recommendation
+        analysis.summary = semantic_res.get("semantic_match_reasoning") or f"Evaluated match for {job.title}."
+        analysis.role_summary = semantic_res.get("role_summary")
+        analysis.key_responsibilities = semantic_res.get("key_responsibilities", [])
+        analysis.matched_skills = combined_matched
+        analysis.missing_skills = combined_missing
+        analysis.required_qualifications = semantic_res.get("required_qualifications", [])
+        analysis.preferred_qualifications = semantic_res.get("preferred_qualifications", [])
+        analysis.keywords = semantic_res.get("keywords", job.skills_raw or [])
+        analysis.red_flags = semantic_res.get("red_flags", [])
+        analysis.model_used = settings.OLLAMA_MODEL
         analysis.status = "completed"
         analysis.analysis_metadata = {
-            "model": self.llm.model,
+            "model": settings.OLLAMA_MODEL,
             "provider": "ollama",
+            "deterministic_score": det_score,
+            "semantic_score": sem_score,
+            "criteria_eval": criteria_eval,
             "verified_facts_count": ground_truth["stats"]["total_verified_facts"],
         }
 
-        # Also update job status to analyzing/reviewed
+        # Update job status
         if job.status == "discovered":
             job.status = "analyzed"
 
-        # 7. Audit log
+        # 7. Audit Ledger
         audit = AuditLog(
             stage="jd_analysis",
             action="JOB_ANALYSIS_COMPLETED",
-            message=f"Completed JD analysis for job {job.id} ({job.title} at {job.company}) with fit score {fit_score:.1f}% ({fit_level}).",
+            message=f"Completed JD analysis for job {job.id} ({job.title} at {job.company}): Fit Score {composite_fit_score:.1f}% ({fit_level}, {recommendation}).",
             payload={
                 "job_id": job.id,
                 "candidate_profile_id": profile.id,
-                "fit_score": fit_score,
-                "fit_level": fit_level,
-                "model_used": self.llm.model,
+                "composite_fit_score": composite_fit_score,
+                "deterministic_score": det_score,
+                "semantic_score": sem_score,
+                "recommendation": recommendation,
+                "model_used": settings.OLLAMA_MODEL,
             },
         )
         db.add(audit)
@@ -202,6 +191,22 @@ Please evaluate the candidate against this job description and return a JSON obj
             .order_by(JobAnalysis.updated_at.desc())
             .first()
         )
+
+    def list_analyses(
+        self,
+        db: Session,
+        page: int = 1,
+        page_size: int = 20,
+        fit_level: Optional[str] = None,
+        recommendation: Optional[str] = None,
+    ) -> List[JobAnalysis]:
+        """List job analyses paginated with optional filtering."""
+        query = db.query(JobAnalysis)
+        if fit_level and fit_level != "all":
+            query = query.filter(JobAnalysis.fit_level == fit_level)
+        if recommendation and recommendation != "all":
+            query = query.filter(JobAnalysis.recommendation == recommendation)
+        return query.order_by(JobAnalysis.updated_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
 
 jd_analysis_service = JDAnalysisService()

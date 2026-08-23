@@ -22,8 +22,12 @@ def upgrade() -> None:
     # 1. Extend job_analyses table
     with op.batch_alter_table("job_analyses", schema=None) as batch_op:
         batch_op.add_column(sa.Column("candidate_profile_id", sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column("deterministic_score", sa.Float(), nullable=True))
+        batch_op.add_column(sa.Column("semantic_score", sa.Float(), nullable=True))
+        batch_op.add_column(sa.Column("recommendation", sa.String(length=50), nullable=True))
         batch_op.add_column(sa.Column("role_summary", sa.Text(), nullable=True))
         batch_op.add_column(sa.Column("key_responsibilities", sa.JSON(), nullable=True))
+        batch_op.add_column(sa.Column("red_flags", sa.JSON(), nullable=True))
         batch_op.add_column(sa.Column("model_used", sa.String(length=100), nullable=True))
         batch_op.add_column(sa.Column("raw_llm_response", sa.Text(), nullable=True))
         batch_op.create_foreign_key(
@@ -71,6 +75,10 @@ def downgrade() -> None:
         batch_op.drop_constraint("fk_job_analyses_candidate_profile_id", type_="foreignkey")
         batch_op.drop_column("raw_llm_response")
         batch_op.drop_column("model_used")
+        batch_op.drop_column("red_flags")
         batch_op.drop_column("key_responsibilities")
         batch_op.drop_column("role_summary")
+        batch_op.drop_column("recommendation")
+        batch_op.drop_column("semantic_score")
+        batch_op.drop_column("deterministic_score")
         batch_op.drop_column("candidate_profile_id")

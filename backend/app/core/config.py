@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "qwen3:8b"
     OLLAMA_TIMEOUT_SECONDS: float = 120.0
-    OLLAMA_TEMPERATURE: float = 0.2
+    OLLAMA_TEMPERATURE: float = 0.1
 
     @property
     def is_sqlite(self) -> bool:
@@ -119,15 +119,22 @@ class Settings(BaseSettings):
                     "active": True,
                 },
                 {
-                    "stage_id": "resume_tailoring",
-                    "name": "Phase 5: JD Analysis & Resume Tailoring",
+                    "stage_id": "jd_analysis_matching",
+                    "name": "Phase 5: Structured JD Analysis & Candidate Matching",
                     "status": "ready",
-                    "description": "Deep JD analysis, skill gap matching, fit scoring, and grounded resume/cover letter tailoring via local Ollama (qwen3:8b)",
+                    "description": "Structured output pipeline via local Ollama (qwen3:8b) for untrusted JD analysis, deterministic + semantic skill matching, and objective fit scoring",
                     "active": True,
                 },
                 {
+                    "stage_id": "resume_tailoring",
+                    "name": "Phase 6: Resume & Cover Letter Tailoring",
+                    "status": "planned",
+                    "description": "Grounded resume tailoring and personalized cover letter generation",
+                    "active": False,
+                },
+                {
                     "stage_id": "browser_preparation",
-                    "name": "Phase 6: Human Approval & Browser Submission",
+                    "name": "Phase 7: Human Approval & Browser Submission",
                     "status": "planned",
                     "description": "Application review queue, portal navigation, and safe human-in-the-loop submission",
                     "active": False,

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, NavTab } from './components/Sidebar';
 import { HealthStatusCard } from './components/HealthStatusCard';
-import { AnalysisAndTailoringView } from './components/AnalysisAndTailoringView';
+import { JDAnalysisView } from './components/JDAnalysisView';
 import { JobDiscoveryView } from './components/JobDiscoveryView';
 import { JobDatabaseView } from './components/JobDatabaseView';
 import { CandidateProfileView } from './components/CandidateProfileView';
@@ -71,19 +71,19 @@ export const App: React.FC = () => {
 
               {/* Highlights Grid */}
               <div className="grid-4">
-                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('tailoring')}>
+                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('analysis')}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#c084fc' }}>
                       <Brain size={18} />
-                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>JD Analysis & Tailoring</h4>
+                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>JD Analysis & Matching</h4>
                     </div>
                     <span className="badge badge-purple">Phase 5 Active</span>
                   </div>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    Local Ollama LLM (qwen3:8b) for deep JD fit scoring and grounded resume/cover letter tailoring.
+                    Local Ollama LLM (qwen3:8b) for untrusted JD analysis, deterministic + semantic matching, and fit scoring.
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#c084fc', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
-                    <span>Open AI Studio</span>
+                    <span>Open Match Studio</span>
                     <ArrowRight size={12} />
                   </div>
                 </div>
@@ -142,7 +142,7 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'tailoring' && <AnalysisAndTailoringView />}
+          {activeTab === 'analysis' && <JDAnalysisView />}
           {activeTab === 'discovery' && <JobDiscoveryView />}
           {activeTab === 'jobs' && <JobDatabaseView />}
           {activeTab === 'profile' && <CandidateProfileView />}

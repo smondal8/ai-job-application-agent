@@ -17,7 +17,7 @@ class LLMStatusResponse(BaseModel):
 
 
 class JobAnalysisRequest(BaseModel):
-    """Request payload to trigger LLM analysis on a job description."""
+    """Request payload to trigger structured LLM analysis on a job description."""
 
     candidate_profile_id: Optional[int] = Field(None, description="Optional specific candidate profile ID (defaults to primary verified profile)")
     custom_instructions: Optional[str] = Field(None, description="Optional extra evaluation instructions")
@@ -30,8 +30,11 @@ class JobAnalysisResponse(BaseModel):
     id: int
     job_id: int
     candidate_profile_id: Optional[int] = None
-    fit_score: Optional[float] = None  # 0.0 - 100.0
+    fit_score: Optional[float] = None  # Composite score (0.0 - 100.0)
+    deterministic_score: Optional[float] = None  # Deterministic keyword match score (0.0 - 100.0)
+    semantic_score: Optional[float] = None  # LLM semantic reasoning score (0.0 - 100.0)
     fit_level: Optional[str] = None  # high, medium, low
+    recommendation: Optional[str] = None  # strong_apply, apply, stretch, skip
     summary: Optional[str] = None
     role_summary: Optional[str] = None
     key_responsibilities: List[str] = Field(default_factory=list)
@@ -40,7 +43,16 @@ class JobAnalysisResponse(BaseModel):
     required_qualifications: List[str] = Field(default_factory=list)
     preferred_qualifications: List[str] = Field(default_factory=list)
     keywords: List[str] = Field(default_factory=list)
+    red_flags: List[str] = Field(default_factory=list)
     model_used: Optional[str] = None
+    analysis_metadata: Optional[Dict[str, Any]] = None
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class JobAnalysisListResponse(BaseModel):
+    items: List[JobAnalysisResponse]
+    total: int
+    page: int = 1
+    page_size: int = 20

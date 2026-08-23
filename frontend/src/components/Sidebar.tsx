@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export type NavTab = 'overview' | 'tailoring' | 'discovery' | 'jobs' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
+export type NavTab = 'overview' | 'analysis' | 'discovery' | 'jobs' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -27,8 +27,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       icon: <LayoutDashboard size={18} />,
     },
     {
-      id: 'tailoring',
-      label: 'JD Analysis & Tailoring',
+      id: 'analysis',
+      label: 'JD Analysis & Matching',
       icon: <Brain size={18} />,
       badge: 'Phase 5',
     },
@@ -54,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'pipeline',
       label: 'Pipeline Architecture',
       icon: <GitMerge size={18} />,
-      badge: '6 Stages',
+      badge: '7 Stages',
     },
     {
       id: 'schemas',
@@ -84,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
           </span>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-          Local Ollama LLM (qwen3:8b) on Apple Silicon GPU for JD Analysis & Grounded Tailoring.
+          Local Ollama LLM (qwen3:8b) on Apple Silicon GPU for JD Analysis & Candidate Matching.
         </p>
       </div>
 
