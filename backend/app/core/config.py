@@ -98,11 +98,11 @@ class Settings(BaseSettings):
                     "active": True,
                 },
                 {
-                    "stage_id": "jd_analysis",
-                    "name": "Phase 3: JD Analysis & Match Scoring",
-                    "status": "planned",
-                    "description": "Skill extraction, keyword alignment, match scoring engine",
-                    "active": False,
+                    "stage_id": "job_database",
+                    "name": "Phase 3: Normalized Job DB & Ingestion",
+                    "status": "ready",
+                    "description": "Normalized job catalog, company registry, JSON/CSV ingestion fixtures, deterministic deduplication",
+                    "active": True,
                 },
                 {
                     "stage_id": "resume_tailoring",

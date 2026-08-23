@@ -3,7 +3,12 @@ import {
   ReadinessResponse,
   SystemConfigResponse,
   PipelineStageInfo,
+  Job,
   JobListResponse,
+  Company,
+  CompanyListResponse,
+  JobIngestionBatch,
+  JobIngestionBatchListResponse,
   APIErrorResponse,
   CandidateProfile,
   WorkExperience,
@@ -50,6 +55,19 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
+export interface JobFilterParams {
+  search?: string;
+  company?: string;
+  location?: string;
+  remote_type?: string;
+  seniority_level?: string;
+  status?: string;
+  min_salary?: number;
+  is_active?: boolean;
+  page?: number;
+  page_size?: number;
+}
+
 export const api = {
   // --- Diagnostics & Config ---
   async getHealth(): Promise<HealthResponse> {
@@ -72,14 +90,85 @@ export const api = {
     return handleResponse<PipelineStageInfo[]>(res);
   },
 
-  async getJobs(page: number = 1, pageSize: number = 10): Promise<JobListResponse> {
-    const res = await fetch(`${API_BASE}/jobs?page=${page}&page_size=${pageSize}`);
-    return handleResponse<JobListResponse>(res);
-  },
-
   async testError(errorType: string): Promise<any> {
     const res = await fetch(`${API_BASE}/test-error?error_type=${errorType}`);
     return handleResponse<any>(res);
+  },
+
+  // --- Phase 3: Job Database & Ingestion ---
+  async getJobs(params: JobFilterParams = {}): Promise<JobListResponse> {
+    const query = new URLSearchParams();
+    if (params.search) query.append('search', params.search);
+    if (params.company) query.append('company', params.company);
+    if (params.location) query.append('location', params.location);
+    if (params.remote_type && params.remote_type !== 'all') query.append('remote_type', params.remote_type);
+    if (params.seniority_level && params.seniority_level !== 'all') query.append('seniority_level', params.seniority_level);
+    if (params.status && params.status !== 'all') query.append('status', params.status);
+    if (params.min_salary) query.append('min_salary', params.min_salary.toString());
+    if (params.is_active !== undefined) query.append('is_active', params.is_active.toString());
+    query.append('page', (params.page || 1).toString());
+    query.append('page_size', (params.page_size || 20).toString());
+
+    const res = await fetch(`${API_BASE}/jobs?${query.toString()}`);
+    return handleResponse<JobListResponse>(res);
+  },
+
+  async getJob(id: number): Promise<Job> {
+    const res = await fetch(`${API_BASE}/jobs/${id}`);
+    return handleResponse<Job>(res);
+  },
+
+  async ingestJobsJson(jsonPayload: string, source: string = 'json_import'): Promise<JobIngestionBatch> {
+    const res = await fetch(`${API_BASE}/jobs/ingest/json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ json_payload: jsonPayload, source }),
+    });
+    return handleResponse<JobIngestionBatch>(res);
+  },
+
+  async ingestJobsCsv(csvText: string, source: string = 'csv_import'): Promise<JobIngestionBatch> {
+    const res = await fetch(`${API_BASE}/jobs/ingest/csv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ csv_text: csvText, source }),
+    });
+    return handleResponse<JobIngestionBatch>(res);
+  },
+
+  async uploadJobsFile(file: File): Promise<JobIngestionBatch> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/jobs/ingest/file`, {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse<JobIngestionBatch>(res);
+  },
+
+  async seedSampleFixtures(): Promise<JobIngestionBatch[]> {
+    const res = await fetch(`${API_BASE}/jobs/ingest/seed-fixtures`, {
+      method: 'POST',
+    });
+    return handleResponse<JobIngestionBatch[]>(res);
+  },
+
+  async getIngestionBatches(page: number = 1, pageSize: number = 20): Promise<JobIngestionBatchListResponse> {
+    const res = await fetch(`${API_BASE}/jobs/ingest/batches?page=${page}&page_size=${pageSize}`);
+    return handleResponse<JobIngestionBatchListResponse>(res);
+  },
+
+  async getCompanies(search?: string, page: number = 1, pageSize: number = 50): Promise<CompanyListResponse> {
+    const url = search
+      ? `${API_BASE}/companies?search=${encodeURIComponent(search)}&page=${page}&page_size=${pageSize}`
+      : `${API_BASE}/companies?page=${page}&page_size=${pageSize}`;
+    const res = await fetch(url);
+    return handleResponse<CompanyListResponse>(res);
+  },
+
+  async getCompany(id: number): Promise<Company> {
+    const res = await fetch(`${API_BASE}/companies/${id}`);
+    return handleResponse<Company>(res);
   },
 
   // --- Phase 2: Candidate Profile & Ground Truth ---

@@ -8,6 +8,13 @@ from app.schemas.health import (
 )
 from app.schemas.config import SystemConfigResponse, PipelineStageInfo
 from app.schemas.job import JobBase, JobCreate, JobUpdate, JobResponse, JobListResponse
+from app.schemas.company import CompanyBase, CompanyCreate, CompanyResponse, CompanyListResponse
+from app.schemas.ingestion import (
+    JobIngestJsonRequest,
+    JobIngestCsvRequest,
+    JobIngestionBatchResponse,
+    JobIngestionBatchListResponse,
+)
 from app.schemas.resume import ResumeBase, ResumeCreate, ResumeResponse, ResumeListResponse
 from app.schemas.application import ApplicationBase, ApplicationCreate, ApplicationResponse, ApplicationListResponse
 from app.schemas.candidate import (
@@ -48,6 +55,14 @@ __all__ = [
     "JobUpdate",
     "JobResponse",
     "JobListResponse",
+    "CompanyBase",
+    "CompanyCreate",
+    "CompanyResponse",
+    "CompanyListResponse",
+    "JobIngestJsonRequest",
+    "JobIngestCsvRequest",
+    "JobIngestionBatchResponse",
+    "JobIngestionBatchListResponse",
     "ResumeBase",
     "ResumeCreate",
     "ResumeResponse",

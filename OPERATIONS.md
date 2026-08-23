@@ -1,6 +1,6 @@
 # AI Job Application Agent — Operations & API Reference Guide
 
-This operational manual documents how to start, stop, monitor, and interact with the **AI Job Application Agent** services, including detailed API endpoints, health probes, Candidate Profile & Master Resume endpoints, and error contract specifications.
+This operational manual documents how to start, stop, monitor, and interact with the **AI Job Application Agent** services, including detailed API endpoints, health probes, Candidate Profile & Master Resume endpoints, Normalized Job Database & Ingestion endpoints, and error contract specifications.
 
 ---
 
@@ -60,17 +60,7 @@ nohup npm run dev -- --host 127.0.0.1 --port 5173 > frontend.log 2>&1 &
 echo $! > frontend.pid
 ```
 
-**3. Check Status:**
-```bash
-# Check if backend responds
-curl -s http://127.0.0.1:8000/health/live
-
-# Check listening ports
-lsof -i :8000
-lsof -i :5173
-```
-
-**4. Stop All Services:**
+**3. Stop All Services:**
 ```bash
 make stop
 # OR
@@ -90,7 +80,7 @@ All API responses include standard headers:
 ### A. Health & Readiness Probes
 
 #### 1. Full System Health (`GET /health` or `GET /api/v1/health`)
-Evaluates the entire backend subsystem, including database roundtrip query latency, SQLite WAL file accessibility, and local storage write probe.
+Evaluates database roundtrip query latency, SQLite WAL file accessibility, and storage health.
 
 **Request:**
 ```bash
@@ -98,7 +88,7 @@ curl -X GET http://127.0.0.1:8000/health
 ```
 
 #### 2. Liveness Probe (`GET /health/live`)
-Ultra-lightweight ping probe for load balancers and process orchestrators to verify the process is alive without querying the database.
+Ultra-lightweight ping probe for load balancers without DB queries.
 
 **Request:**
 ```bash
@@ -106,7 +96,7 @@ curl -X GET http://127.0.0.1:8000/health/live
 ```
 
 #### 3. Readiness Probe (`GET /health/ready`)
-Traffic gating probe. Returns `HTTP 200 OK` if the database is reachable and storage is writable; otherwise returns `HTTP 503 Service Unavailable`.
+Traffic gating probe returning `HTTP 200 OK` or `HTTP 503 Service Unavailable`.
 
 **Request:**
 ```bash
@@ -115,113 +105,92 @@ curl -X GET http://127.0.0.1:8000/health/ready
 
 ---
 
-### B. Phase 2: Candidate Profile & Ground Truth Endpoints
+### B. Phase 3: Normalized Job Database & Ingestion Endpoints
 
-#### 1. Primary Candidate Profile (`GET /api/v1/profile`)
-Retrieves the active candidate master profile including nested work experiences, educations, candidate skills, and projects.
+#### 1. List & Filter Normalized Jobs (`GET /api/v1/jobs`)
+Filter jobs by search keywords, company, location, remote/hybrid status, seniority, salary, and active state.
 
 ```bash
-curl -X GET http://127.0.0.1:8000/api/v1/profile
+curl -X GET "http://127.0.0.1:8000/api/v1/jobs?remote_type=remote&seniority_level=senior&page=1&page_size=20"
 ```
 
-#### 2. Update Candidate Profile Basics (`PUT /api/v1/profile/{id}`)
-Update candidate legal name, headline, summary, contact details, and social links.
+#### 2. Ingest Jobs via JSON (`POST /api/v1/jobs/ingest/json`)
+Ingest raw JSON payload with deterministic conservative deduplication.
 
 ```bash
-curl -X PUT http://127.0.0.1:8000/api/v1/profile/1 \
+curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/json \
   -H "Content-Type: application/json" \
   -d '{
-    "full_name": "Alex Morgan",
-    "email": "alex.morgan@example.com",
-    "headline": "Senior AI Systems Architect",
-    "location": "San Francisco, CA"
+    "jobs": [
+      {
+        "title": "Staff Platform Engineer",
+        "company": "Stripe, Inc.",
+        "location": "San Francisco, CA",
+        "remote_type": "hybrid",
+        "salary_min": 190000,
+        "salary_max": 250000
+      }
+    ],
+    "source": "json_feed"
   }'
 ```
 
-#### 3. Human Verification Gate (`POST /api/v1/profile/{id}/verify`)
-Approves and locks candidate facts as verified ground truth.
+#### 3. Ingest Jobs via CSV (`POST /api/v1/jobs/ingest/csv`)
+Ingest raw CSV formatted job listings with column alias mapping.
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/profile/1/verify?verify_all_children=true"
+curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/csv \
+  -H "Content-Type: application/json" \
+  -d '{
+    "csv_text": "job_title,employer,location,remote_type\nSenior SRE,Cloudflare,Remote,remote",
+    "source": "csv_feed"
+  }'
 ```
 
-#### 4. Authoritative LLM Ground Truth Context (`GET /api/v1/profile/{id}/verified-context`)
-**CRITICAL SERVICE BOUNDARY FOR DOWNSTREAM AI MODULES**:
-Strictly returns ONLY facts where `is_verified == True`. Unverified draft facts are completely excluded. Missing fields remain omitted without hallucination.
+#### 4. Upload & Ingest Job File (`POST /api/v1/jobs/ingest/file`)
+Multipart upload for `.json` or `.csv` files.
 
 ```bash
-curl -X GET http://127.0.0.1:8000/api/v1/profile/1/verified-context
+curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/file \
+  -F "file=@/path/to/jobs.csv"
 ```
 
-**Response Payload (`200 OK`):**
-```json
-{
-  "profile_id": 1,
-  "profile_verified": true,
-  "verified_at": "2026-08-23T14:20:00+00:00",
-  "candidate": {
-    "full_name": "Alex Morgan",
-    "email": "alex.morgan@example.com",
-    "phone": "+1 (555) 019-2834",
-    "location": "San Francisco, CA",
-    "headline": "Senior AI Systems Architect",
-    "summary": "Distributed systems engineer specializing in LLM agents."
-  },
-  "experiences": [
-    {
-      "id": 1,
-      "company": "DeepMind",
-      "position": "Research Engineer",
-      "start_date": "2022-01",
-      "end_date": null,
-      "is_current": true,
-      "highlights": ["Architected autonomous multi-agent systems."]
-    }
-  ],
-  "educations": [],
-  "skills": [
-    {"name": "Python", "category": "languages", "proficiency": "expert"},
-    {"name": "FastAPI", "category": "frameworks", "proficiency": "advanced"}
-  ],
-  "projects": [],
-  "stats": {
-    "verified_experiences_count": 1,
-    "verified_educations_count": 0,
-    "verified_skills_count": 2,
-    "verified_projects_count": 0,
-    "total_verified_facts": 4
-  },
-  "formatted_llm_prompt_context": "# AUTHORITATIVE CANDIDATE GROUND TRUTH (VERIFIED FACTS ONLY)\n**Candidate Name**: Alex Morgan\n..."
-}
+#### 5. Seed Built-in Sample Fixtures (`POST /api/v1/jobs/ingest/seed-fixtures`)
+Loads bundled `jobs_sample.json` and `jobs_sample.csv` fixtures to prove ingestion and conservative deduplication.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/seed-fixtures
+```
+
+#### 6. List Ingestion Batches (`GET /api/v1/jobs/ingest/batches`)
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/jobs/ingest/batches
+```
+
+#### 7. List Companies Registry (`GET /api/v1/companies`)
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/companies
 ```
 
 ---
 
-### C. Phase 2: Raw Resume Ingestion & Storage
+### C. Phase 2: Candidate Profile & Ground Truth Endpoints
 
-#### 1. Ingest Raw Pasted Resume Text (`POST /api/v1/resumes/imports/text`)
+#### 1. Primary Candidate Profile (`GET /api/v1/profile`)
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/resumes/imports/text \
-  -H "Content-Type: application/json" \
-  -d '{
-    "raw_text": "Alex Morgan\nalex@example.com\nSkills: Python, FastAPI, Docker",
-    "label": "Imported Resume 2026"
-  }'
+curl -X GET http://127.0.0.1:8000/api/v1/profile
 ```
 
-#### 2. Upload Raw Resume File (`POST /api/v1/resumes/imports/upload`)
-Securely stores uploaded file in `./data/storage/resumes/` (never in Git), computes SHA-256 integrity hash, and parses draft candidate facts.
-
+#### 2. Human Verification Gate (`POST /api/v1/profile/{id}/verify`)
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/resumes/imports/upload \
-  -F "file=@/path/to/resume.pdf"
+curl -X POST "http://127.0.0.1:8000/api/v1/profile/1/verify?verify_all_children=true"
 ```
 
-#### 3. Transfer Draft Facts to Profile (`POST /api/v1/resumes/imports/{id}/apply-to-profile`)
-Transfers extracted draft facts into candidate profile entities with `is_verified: False` for human review.
+#### 3. Authoritative LLM Ground Truth Context (`GET /api/v1/profile/{id}/verified-context`)
+Strictly returns ONLY facts where `is_verified == True`.
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/resumes/imports/1/apply-to-profile
+curl -X GET http://127.0.0.1:8000/api/v1/profile/1/verified-context
 ```
 
 ---
@@ -239,7 +208,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/resumes/imports/1/apply-to-profile
 Database files and migrations are managed via **Alembic**:
 
 ```bash
-# Run latest database migrations (Applies 0001 and 0002)
+# Run latest database migrations (Applies 0001, 0002, and 0003)
 make migrate
 # OR: ./scripts/migrate.sh
 

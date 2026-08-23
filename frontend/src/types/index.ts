@@ -73,21 +73,42 @@ export interface APIErrorResponse {
   };
 }
 
+// --- Phase 3 Job & Ingestion Types ---
+
 export interface Job {
   id: number;
   external_id?: string | null;
+  company_id?: number | null;
+  batch_id?: string | null;
   title: string;
   company: string;
   location?: string | null;
+  department?: string | null;
+  dedup_hash?: string | null;
+  normalized_company?: string | null;
+  normalized_title?: string | null;
+  normalized_location?: string | null;
   remote_type?: string | null;
+  workplace_type?: string | null;
   job_type?: string | null;
+  employment_type?: string | null;
+  seniority_level?: string | null;
+  experience_years_min?: number | null;
+  experience_years_max?: number | null;
   url?: string | null;
   source: string;
+  description_raw?: string | null;
+  description_clean?: string | null;
   salary_min?: string | number | null;
   salary_max?: string | number | null;
   currency: string;
+  skills_raw?: string[];
+  benefits?: string[];
+  metadata_extra?: Record<string, any>;
   status: string;
+  is_active: boolean;
   posted_at?: string | null;
+  last_seen_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -97,6 +118,45 @@ export interface JobListResponse {
   total: number;
   page: number;
   page_size: number;
+}
+
+export interface Company {
+  id: number;
+  name: string;
+  normalized_name: string;
+  domain?: string | null;
+  industry?: string | null;
+  company_size?: string | null;
+  careers_url?: string | null;
+  location_headquarters?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyListResponse {
+  items: Company[];
+  total: number;
+}
+
+export interface JobIngestionBatch {
+  id?: number;
+  batch_id: string;
+  source: string;
+  filename?: string | null;
+  file_hash?: string | null;
+  total_records: number;
+  inserted_count: number;
+  updated_count: number;
+  duplicate_count: number;
+  error_count: number;
+  status: string;
+  error_log?: Array<Record<string, any>>;
+  created_at?: string;
+}
+
+export interface JobIngestionBatchListResponse {
+  items: JobIngestionBatch[];
+  total: number;
 }
 
 // --- Phase 2 Candidate Profile Types ---
