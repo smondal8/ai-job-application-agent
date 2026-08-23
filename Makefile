@@ -18,6 +18,9 @@ stop:
 migrate:
 	./scripts/migrate.sh
 
+smoke-test-phase5:
+	./scripts/smoke-test-phase5.sh
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
