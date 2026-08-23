@@ -1,6 +1,6 @@
 # AI Job Application Agent — Operations & API Reference Guide
 
-This operational manual documents how to start, stop, monitor, and interact with the **AI Job Application Agent** services, including detailed API endpoints, health probes, Candidate Profile & Master Resume endpoints, Normalized Job Database & Ingestion endpoints, and error contract specifications.
+This operational manual documents how to start, stop, monitor, and interact with the **AI Job Application Agent** services, including detailed API endpoints, health probes, Candidate Profile endpoints, Normalized Job Database endpoints, and Source-Agnostic Job Discovery endpoints.
 
 ---
 
@@ -82,7 +82,6 @@ All API responses include standard headers:
 #### 1. Full System Health (`GET /health` or `GET /api/v1/health`)
 Evaluates database roundtrip query latency, SQLite WAL file accessibility, and storage health.
 
-**Request:**
 ```bash
 curl -X GET http://127.0.0.1:8000/health
 ```
@@ -90,7 +89,6 @@ curl -X GET http://127.0.0.1:8000/health
 #### 2. Liveness Probe (`GET /health/live`)
 Ultra-lightweight ping probe for load balancers without DB queries.
 
-**Request:**
 ```bash
 curl -X GET http://127.0.0.1:8000/health/live
 ```
@@ -98,25 +96,70 @@ curl -X GET http://127.0.0.1:8000/health/live
 #### 3. Readiness Probe (`GET /health/ready`)
 Traffic gating probe returning `HTTP 200 OK` or `HTTP 503 Service Unavailable`.
 
-**Request:**
 ```bash
 curl -X GET http://127.0.0.1:8000/health/ready
 ```
 
 ---
 
-### B. Phase 3: Normalized Job Database & Ingestion Endpoints
+### B. Phase 4: Source-Agnostic Job Discovery Framework & Orchestration
+
+#### 1. List Registered Adapters (`GET /api/v1/discovery/adapters`)
+Lists all discovery adapters, rate limits, reliability, and capabilities.
+
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/discovery/adapters
+```
+
+#### 2. Launch Discovery Run (`POST /api/v1/discovery/run`)
+Executes an on-demand multi-source job discovery run with rate-limiting, retries, and automatic ingestion into the Phase 3 Job Database.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/discovery/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "criteria": {
+      "keywords": ["Distributed Systems", "Backend Engineer"],
+      "target_companies": ["stripe", "openai", "anthropic", "figma"],
+      "locations": ["San Francisco, CA", "Remote"],
+      "remote_only": false,
+      "sources": ["greenhouse", "lever", "remote_tech", "protected_portal_fallback"],
+      "max_results_per_source": 25
+    }
+  }'
+```
+
+#### 3. List Discovery Runs & Audit Trail (`GET /api/v1/discovery/runs`)
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/discovery/runs
+```
+
+#### 4. Save Search Profile (`POST /api/v1/discovery/search-profiles`)
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/discovery/search-profiles \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Senior Distributed Backend",
+    "description": "High-priority remote backend roles",
+    "criteria": {
+      "keywords": ["Distributed Systems", "Go", "Python"],
+      "remote_only": true,
+      "sources": ["greenhouse", "lever", "remote_tech"]
+    },
+    "is_active": true
+  }'
+```
+
+---
+
+### C. Phase 3: Normalized Job Database & Ingestion Endpoints
 
 #### 1. List & Filter Normalized Jobs (`GET /api/v1/jobs`)
-Filter jobs by search keywords, company, location, remote/hybrid status, seniority, salary, and active state.
-
 ```bash
 curl -X GET "http://127.0.0.1:8000/api/v1/jobs?remote_type=remote&seniority_level=senior&page=1&page_size=20"
 ```
 
 #### 2. Ingest Jobs via JSON (`POST /api/v1/jobs/ingest/json`)
-Ingest raw JSON payload with deterministic conservative deduplication.
-
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/json \
   -H "Content-Type: application/json" \
@@ -136,8 +179,6 @@ curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/json \
 ```
 
 #### 3. Ingest Jobs via CSV (`POST /api/v1/jobs/ingest/csv`)
-Ingest raw CSV formatted job listings with column alias mapping.
-
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/csv \
   -H "Content-Type: application/json" \
@@ -148,45 +189,26 @@ curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/csv \
 ```
 
 #### 4. Upload & Ingest Job File (`POST /api/v1/jobs/ingest/file`)
-Multipart upload for `.json` or `.csv` files.
-
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/file \
   -F "file=@/path/to/jobs.csv"
 ```
 
 #### 5. Seed Built-in Sample Fixtures (`POST /api/v1/jobs/ingest/seed-fixtures`)
-Loads bundled `jobs_sample.json` and `jobs_sample.csv` fixtures to prove ingestion and conservative deduplication.
-
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/jobs/ingest/seed-fixtures
 ```
 
-#### 6. List Ingestion Batches (`GET /api/v1/jobs/ingest/batches`)
-```bash
-curl -X GET http://127.0.0.1:8000/api/v1/jobs/ingest/batches
-```
-
-#### 7. List Companies Registry (`GET /api/v1/companies`)
-```bash
-curl -X GET http://127.0.0.1:8000/api/v1/companies
-```
-
 ---
 
-### C. Phase 2: Candidate Profile & Ground Truth Endpoints
+### D. Phase 2: Candidate Profile & Ground Truth Endpoints
 
 #### 1. Primary Candidate Profile (`GET /api/v1/profile`)
 ```bash
 curl -X GET http://127.0.0.1:8000/api/v1/profile
 ```
 
-#### 2. Human Verification Gate (`POST /api/v1/profile/{id}/verify`)
-```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/profile/1/verify?verify_all_children=true"
-```
-
-#### 3. Authoritative LLM Ground Truth Context (`GET /api/v1/profile/{id}/verified-context`)
+#### 2. Authoritative LLM Ground Truth Context (`GET /api/v1/profile/{id}/verified-context`)
 Strictly returns ONLY facts where `is_verified == True`.
 
 ```bash
@@ -195,7 +217,7 @@ curl -X GET http://127.0.0.1:8000/api/v1/profile/1/verified-context
 
 ---
 
-### D. Interactive Documentation UIs
+### E. Interactive Documentation UIs
 
 - **Swagger UI (OpenAPI Interactive Explorer)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - **ReDoc UI**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
@@ -208,7 +230,7 @@ curl -X GET http://127.0.0.1:8000/api/v1/profile/1/verified-context
 Database files and migrations are managed via **Alembic**:
 
 ```bash
-# Run latest database migrations (Applies 0001, 0002, and 0003)
+# Run latest database migrations (Applies 0001, 0002, 0003, and 0004)
 make migrate
 # OR: ./scripts/migrate.sh
 

@@ -9,6 +9,12 @@ import {
   CompanyListResponse,
   JobIngestionBatch,
   JobIngestionBatchListResponse,
+  SearchCriteria,
+  AdapterInfo,
+  DiscoveryRun,
+  DiscoveryRunListResponse,
+  SearchProfile,
+  SearchProfileListResponse,
   APIErrorResponse,
   CandidateProfile,
   WorkExperience,
@@ -93,6 +99,62 @@ export const api = {
   async testError(errorType: string): Promise<any> {
     const res = await fetch(`${API_BASE}/test-error?error_type=${errorType}`);
     return handleResponse<any>(res);
+  },
+
+  // --- Phase 4: Job Discovery Framework ---
+  async getDiscoveryAdapters(): Promise<AdapterInfo[]> {
+    const res = await fetch(`${API_BASE}/discovery/adapters`);
+    return handleResponse<AdapterInfo[]>(res);
+  },
+
+  async runDiscovery(payload: {
+    criteria?: SearchCriteria;
+    search_profile_id?: number;
+    source?: string;
+  }): Promise<DiscoveryRun> {
+    const res = await fetch(`${API_BASE}/discovery/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<DiscoveryRun>(res);
+  },
+
+  async getDiscoveryRuns(page: number = 1, pageSize: number = 20): Promise<DiscoveryRunListResponse> {
+    const res = await fetch(`${API_BASE}/discovery/runs?page=${page}&page_size=${pageSize}`);
+    return handleResponse<DiscoveryRunListResponse>(res);
+  },
+
+  async getDiscoveryRun(runId: string): Promise<DiscoveryRun> {
+    const res = await fetch(`${API_BASE}/discovery/runs/${runId}`);
+    return handleResponse<DiscoveryRun>(res);
+  },
+
+  async getSearchProfiles(): Promise<SearchProfileListResponse> {
+    const res = await fetch(`${API_BASE}/discovery/search-profiles`);
+    return handleResponse<SearchProfileListResponse>(res);
+  },
+
+  async createSearchProfile(data: {
+    name: string;
+    description?: string;
+    criteria: SearchCriteria;
+    is_active?: boolean;
+    auto_run_interval_hours?: number;
+  }): Promise<SearchProfile> {
+    const res = await fetch(`${API_BASE}/discovery/search-profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<SearchProfile>(res);
+  },
+
+  async deleteSearchProfile(profileId: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/discovery/search-profiles/${profileId}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
   },
 
   // --- Phase 3: Job Database & Ingestion ---
