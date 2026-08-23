@@ -47,11 +47,11 @@ def test_settings_public_config():
     assert phase5["status"] == "ready"
     assert phase5["active"] is True
 
-    # Verify Phase 6 is planned
+    # Verify Phase 6 is ready and active
     phase6 = public_config["pipeline_stages"][5]
     assert phase6["stage_id"] == "resume_tailoring"
-    assert phase6["status"] == "planned"
-    assert phase6["active"] is False
+    assert phase6["status"] == "ready"
+    assert phase6["active"] is True
 
     # Verify Phase 7 is planned
     phase7 = public_config["pipeline_stages"][6]

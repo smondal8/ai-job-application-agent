@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, NavTab } from './components/Sidebar';
 import { HealthStatusCard } from './components/HealthStatusCard';
+import { ResumeTailoringStudioView } from './components/ResumeTailoringStudioView';
 import { JDAnalysisView } from './components/JDAnalysisView';
 import { JobDiscoveryView } from './components/JobDiscoveryView';
 import { JobDatabaseView } from './components/JobDatabaseView';
@@ -12,7 +13,7 @@ import { SystemConfigCard } from './components/SystemConfigCard';
 import { ErrorLab } from './components/ErrorLab';
 import { api } from './services/api';
 import { HealthResponse, SystemConfigResponse, PipelineStageInfo } from './types';
-import { ArrowRight, UserCheck, Briefcase, Compass, Brain } from 'lucide-react';
+import { ArrowRight, Briefcase, Compass, Brain, FileText } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -71,6 +72,23 @@ export const App: React.FC = () => {
 
               {/* Highlights Grid */}
               <div className="grid-4">
+                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('tailoring')}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399' }}>
+                      <FileText size={18} />
+                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Resume Tailoring</h4>
+                    </div>
+                    <span className="badge badge-green">Phase 6 Active</span>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Grounded tailoring with atomic fact traceability (<code>source_fact_ids</code>) and deterministic document compiler.
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#34d399', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
+                    <span>Open Tailoring Studio</span>
+                    <ArrowRight size={12} />
+                  </div>
+                </div>
+
                 <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('analysis')}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#c084fc' }}>
@@ -121,27 +139,11 @@ export const App: React.FC = () => {
                     <ArrowRight size={12} />
                   </div>
                 </div>
-
-                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('profile')}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#c084fc' }}>
-                      <UserCheck size={18} />
-                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Candidate Profile & CV</h4>
-                    </div>
-                    <span className="badge badge-purple">Phase 2 Active</span>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    Verified candidate facts, master resume inventory, and authoritative LLM ground truth context boundary.
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#c084fc', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
-                    <span>Manage Profile</span>
-                    <ArrowRight size={12} />
-                  </div>
-                </div>
               </div>
             </div>
           )}
 
+          {activeTab === 'tailoring' && <ResumeTailoringStudioView />}
           {activeTab === 'analysis' && <JDAnalysisView />}
           {activeTab === 'discovery' && <JobDiscoveryView />}
           {activeTab === 'jobs' && <JobDatabaseView />}

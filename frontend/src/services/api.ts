@@ -18,6 +18,10 @@ import {
   LLMStatusResponse,
   JobAnalysis,
   JobAnalysisListResponse,
+  TailoredResume,
+  TailoredResumeListResponse,
+  ResumeTailoringRequest,
+  TailoredResumeApprovalRequest,
   APIErrorResponse,
   CandidateProfile,
   WorkExperience,
@@ -102,6 +106,55 @@ export const api = {
   async testError(errorType: string): Promise<any> {
     const res = await fetch(`${API_BASE}/test-error?error_type=${errorType}`);
     return handleResponse<any>(res);
+  },
+
+  // --- Phase 6: Grounded Resume Tailoring & Document Compilation ---
+  async tailorResume(jobId: number, payload?: ResumeTailoringRequest): Promise<TailoredResume> {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/tailor-resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return handleResponse<TailoredResume>(res);
+  },
+
+  async getJobTailoredResume(jobId: number): Promise<TailoredResume> {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/tailored-resume`);
+    return handleResponse<TailoredResume>(res);
+  },
+
+  async getTailoredResumes(params: {
+    page?: number;
+    page_size?: number;
+    status?: string;
+    validation_status?: string;
+  } = {}): Promise<TailoredResumeListResponse> {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page.toString());
+    if (params.page_size) query.append('page_size', params.page_size.toString());
+    if (params.status && params.status !== 'all') query.append('status', params.status);
+    if (params.validation_status && params.validation_status !== 'all') query.append('validation_status', params.validation_status);
+
+    const res = await fetch(`${API_BASE}/tailored-resumes?${query.toString()}`);
+    return handleResponse<TailoredResumeListResponse>(res);
+  },
+
+  async getTailoredResumeById(id: number): Promise<TailoredResume> {
+    const res = await fetch(`${API_BASE}/tailored-resumes/${id}`);
+    return handleResponse<TailoredResume>(res);
+  },
+
+  async approveTailoredResume(id: number, payload?: TailoredResumeApprovalRequest): Promise<TailoredResume> {
+    const res = await fetch(`${API_BASE}/tailored-resumes/${id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return handleResponse<TailoredResume>(res);
+  },
+
+  downloadDocumentUrl(id: number, format: 'markdown' | 'text' | 'html' | 'cover_letter' = 'markdown'): string {
+    return `${API_BASE}/tailored-resumes/${id}/download?format=${format}`;
   },
 
   // --- Phase 5: Local LLM JD Analysis & Candidate Matching ---

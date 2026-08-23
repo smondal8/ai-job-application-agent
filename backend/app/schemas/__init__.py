@@ -71,6 +71,7 @@ from app.schemas.analysis import (
 )
 from app.schemas.tailoring import (
     ResumeTailoringRequest,
+    TailoredResumeApprovalRequest,
     TailoredResumeResponse,
     TailoredResumeListResponse,
 )
@@ -135,6 +136,7 @@ __all__ = [
     "JobAnalysisResponse",
     "JobAnalysisListResponse",
     "ResumeTailoringRequest",
+    "TailoredResumeApprovalRequest",
     "TailoredResumeResponse",
     "TailoredResumeListResponse",
 ]
