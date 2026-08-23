@@ -6,6 +6,14 @@ from app.models.resume import Resume, TailoredResume
 from app.models.approval import ApplicationReview
 from app.models.application import Application
 from app.models.audit import AuditLog
+from app.models.candidate import (
+    CandidateProfile,
+    WorkExperience,
+    Education,
+    CandidateSkill,
+    Project,
+    RawResumeImport,
+)
 
 __all__ = [
     "Base",
@@ -17,4 +25,10 @@ __all__ = [
     "ApplicationReview",
     "Application",
     "AuditLog",
+    "CandidateProfile",
+    "WorkExperience",
+    "Education",
+    "CandidateSkill",
+    "Project",
+    "RawResumeImport",
 ]

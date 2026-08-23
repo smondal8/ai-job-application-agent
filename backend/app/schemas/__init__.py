@@ -10,6 +10,27 @@ from app.schemas.config import SystemConfigResponse, PipelineStageInfo
 from app.schemas.job import JobBase, JobCreate, JobUpdate, JobResponse, JobListResponse
 from app.schemas.resume import ResumeBase, ResumeCreate, ResumeResponse, ResumeListResponse
 from app.schemas.application import ApplicationBase, ApplicationCreate, ApplicationResponse, ApplicationListResponse
+from app.schemas.candidate import (
+    CandidateProfileBase,
+    CandidateProfileCreate,
+    CandidateProfileUpdate,
+    CandidateProfileResponse,
+    WorkExperienceCreate,
+    WorkExperienceUpdate,
+    WorkExperienceResponse,
+    EducationCreate,
+    EducationUpdate,
+    EducationResponse,
+    CandidateSkillCreate,
+    CandidateSkillBulkCreate,
+    CandidateSkillResponse,
+    ProjectCreate,
+    ProjectUpdate,
+    ProjectResponse,
+    RawResumeImportCreateText,
+    RawResumeImportResponse,
+    VerifiedGroundTruthContextResponse,
+)
 
 __all__ = [
     "ResponseEnvelope",
@@ -35,4 +56,23 @@ __all__ = [
     "ApplicationCreate",
     "ApplicationResponse",
     "ApplicationListResponse",
+    "CandidateProfileBase",
+    "CandidateProfileCreate",
+    "CandidateProfileUpdate",
+    "CandidateProfileResponse",
+    "WorkExperienceCreate",
+    "WorkExperienceUpdate",
+    "WorkExperienceResponse",
+    "EducationCreate",
+    "EducationUpdate",
+    "EducationResponse",
+    "CandidateSkillCreate",
+    "CandidateSkillBulkCreate",
+    "CandidateSkillResponse",
+    "ProjectCreate",
+    "ProjectUpdate",
+    "ProjectResponse",
+    "RawResumeImportCreateText",
+    "RawResumeImportResponse",
+    "VerifiedGroundTruthContextResponse",
 ]

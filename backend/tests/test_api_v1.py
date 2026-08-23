@@ -19,7 +19,7 @@ def test_api_v1_pipeline_endpoint(client: TestClient):
     assert len(data) == 6
     stage_ids = [s["stage_id"] for s in data]
     assert "core_foundation" in stage_ids
-    assert "job_discovery" in stage_ids
+    assert "candidate_profile" in stage_ids
     assert "browser_preparation" in stage_ids
 
 
