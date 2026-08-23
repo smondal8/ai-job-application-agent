@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.logging import get_logger
 from app.services.llm.ollama_service import ollama_service, OllamaLLMService
@@ -126,5 +126,4 @@ Please analyze the role and evaluate the candidate's semantic fit. Return a JSON
             return fallback
 
 
-from typing import Tuple
 semantic_matcher = SemanticMatcher()
