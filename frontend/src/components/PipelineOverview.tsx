@@ -4,6 +4,7 @@ import {
   UserCheck,
   Briefcase,
   Compass,
+  Brain,
   FileText,
   Globe,
   Code,
@@ -15,7 +16,7 @@ interface PipelineOverviewProps {
 }
 
 export const PipelineOverview: React.FC<PipelineOverviewProps> = () => {
-  const [selectedStage, setSelectedStage] = useState<string>('job_discovery');
+  const [selectedStage, setSelectedStage] = useState<string>('jd_analysis_matching');
 
   const stageDetails: Record<
     string,
@@ -95,7 +96,7 @@ interface JobIngestionBatchResponse {
     },
     job_discovery: {
       title: 'Job Discovery & Orchestration',
-      phase: 'Phase 4 (Active)',
+      phase: 'Phase 4 (Complete)',
       icon: <Compass size={24} color="#38bdf8" />,
       status: 'active',
       description:
@@ -115,27 +116,54 @@ interface DiscoveryRunResponse {
   adapter_logs: Array<{ adapter: string; status: string; discovered_count: number }>;
 }`,
     },
+    jd_analysis_matching: {
+      title: 'Structured JD Analysis & Candidate Matching',
+      phase: 'Phase 5 (Active)',
+      icon: <Brain size={24} color="#c084fc" />,
+      status: 'active',
+      description:
+        'Prompt-injection safe structured output pipeline using local Ollama (qwen3:8b) on Apple Silicon GPU. Combines deterministic keyword matching and deep semantic evaluation for objective fit scoring (0-100%).',
+      inputs: ['Untrusted Job Description (Isolated in sandbox)', 'Authoritative Verified Candidate Facts'],
+      outputs: ['JobAnalysis (Composite Fit Score, Matched/Missing Skills Matrix, Recommendations)'],
+      tables: ['job_analyses', 'audit_logs'],
+      contract: `// Phase 5 JD Analysis & Matching Contract
+interface JobAnalysisResponse {
+  job_id: number;
+  candidate_profile_id: number;
+  fit_score: number; // 0.0 - 100.0 (Composite)
+  deterministic_score: number;
+  semantic_score: number;
+  fit_level: 'high' | 'medium' | 'low';
+  recommendation: 'strong_apply' | 'apply' | 'stretch' | 'skip';
+  summary: string;
+  role_summary: string;
+  key_responsibilities: string[];
+  matched_skills: string[];
+  missing_skills: string[];
+  keywords: string[];
+  model_used: string;
+}`,
+    },
     resume_tailoring: {
-      title: 'JD Analysis & Resume Tailoring',
-      phase: 'Phase 5 (Planned)',
-      icon: <FileText size={24} color="#f59e0b" />,
+      title: 'Resume & Cover Letter Tailoring',
+      phase: 'Phase 6 (Planned)',
+      icon: <FileText size={24} color="#a855f7" />,
       status: 'planned',
       description:
-        'Analyzes job descriptions against verified candidate facts and dynamically tailors resumes, cover letters, and match fit scores without hallucination.',
-      inputs: ['Verified Ground Truth Resume', 'Job Description (description_raw)'],
-      outputs: ['TailoredResume record', 'Cover Letter', 'Fit Score (0-100)'],
-      tables: ['job_analyses', 'resumes', 'tailored_resumes'],
-      contract: `interface ResumeTailoringContract {
+        'Grounded resume tailoring and personalized cover letter generation strictly from verified candidate facts.',
+      inputs: ['JobAnalysis Artifact', 'Verified Candidate Facts'],
+      outputs: ['Tailored Resume (PDF/Markdown)', 'Personalized Cover Letter'],
+      tables: ['tailored_resumes', 'audit_logs'],
+      contract: `interface TailoredResumeContract {
   job_id: number;
-  fit_score: number;
-  tailored_summary: string;
-  highlighted_skills: string[];
+  markdown_content: string;
+  cover_letter: string;
 }`,
     },
     browser_preparation: {
-      title: 'Human Review & Portal Submission',
-      phase: 'Phase 6 (Planned)',
-      icon: <Globe size={24} color="#a855f7" />,
+      title: 'Human Approval & Browser Submission',
+      phase: 'Phase 7 (Planned)',
+      icon: <Globe size={24} color="#94a3b8" />,
       status: 'planned',
       description:
         'Application approval queue and assisted portal navigation with final human confirmation gate before submission.',
@@ -149,7 +177,7 @@ interface DiscoveryRunResponse {
     },
   };
 
-  const currentDetail = stageDetails[selectedStage] || stageDetails['job_discovery'];
+  const currentDetail = stageDetails[selectedStage] || stageDetails['jd_analysis_matching'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -158,7 +186,7 @@ interface DiscoveryRunResponse {
           End-to-End Pipeline Architecture
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 4 provides the source-agnostic discovery framework.
+          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 5 delivers prompt-isolated structured JD analysis and dual deterministic/semantic candidate matching.
         </p>
       </div>
 
@@ -167,7 +195,7 @@ interface DiscoveryRunResponse {
         className="card"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
           gap: '0.75rem',
           padding: '1.5rem 1rem',
           backgroundColor: '#0b1120',
@@ -185,8 +213,8 @@ interface DiscoveryRunResponse {
                 cursor: 'pointer',
                 borderRadius: '8px',
                 padding: '1rem',
-                border: `1px solid ${isSelected ? '#38bdf8' : isActive ? '#10b981' : 'var(--border-color)'}`,
-                backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.1)' : isActive ? 'rgba(16, 185, 129, 0.12)' : '#131b2e',
+                border: `1px solid ${isSelected ? '#c084fc' : isActive ? '#10b981' : 'var(--border-color)'}`,
+                backgroundColor: isSelected ? 'rgba(192, 132, 252, 0.1)' : isActive ? 'rgba(16, 185, 129, 0.12)' : '#131b2e',
                 transition: 'all 0.2s',
               }}
             >
@@ -221,14 +249,14 @@ interface DiscoveryRunResponse {
       </div>
 
       {/* Selected Stage Deep-Dive Card */}
-      <div className="card" style={{ borderTop: `3px solid ${currentDetail.status === 'active' ? '#38bdf8' : '#64748b'}` }}>
+      <div className="card" style={{ borderTop: `3px solid ${currentDetail.status === 'active' ? '#c084fc' : '#64748b'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {currentDetail.icon}
             <div>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{currentDetail.title}</h3>
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                <span className="badge badge-blue">{currentDetail.phase}</span>
+                <span className="badge badge-purple">{currentDetail.phase}</span>
                 <span className={`badge ${currentDetail.status === 'active' ? 'badge-green' : 'badge-gray'}`}>
                   Status: {currentDetail.status.toUpperCase()}
                 </span>

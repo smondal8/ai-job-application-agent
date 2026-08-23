@@ -53,6 +53,9 @@ export interface SystemConfigResponse {
   storage_dir: string;
   log_level: string;
   log_format: string;
+  llm_provider?: string;
+  llm_model?: string;
+  llm_base_url?: string;
   pipeline_stages: PipelineStageInfo[];
 }
 
@@ -71,6 +74,51 @@ export interface APIErrorResponse {
     request_id?: string;
     timestamp: string;
   };
+}
+
+// --- Phase 5: Local LLM JD Analysis & Candidate Matching Types ---
+
+export interface LLMStatusResponse {
+  provider: string;
+  status: 'connected' | 'disconnected' | 'degraded';
+  base_url: string;
+  active_model: string;
+  is_active_model_available: boolean;
+  available_models: string[];
+  latency_ms: number;
+  error?: string | null;
+}
+
+export interface JobAnalysis {
+  id: number;
+  job_id: number;
+  candidate_profile_id?: number | null;
+  fit_score?: number | null;
+  deterministic_score?: number | null;
+  semantic_score?: number | null;
+  fit_level?: 'high' | 'medium' | 'low' | null;
+  recommendation?: 'strong_apply' | 'apply' | 'stretch' | 'skip' | null;
+  summary?: string | null;
+  role_summary?: string | null;
+  key_responsibilities: string[];
+  matched_skills: string[];
+  missing_skills: string[];
+  required_qualifications: string[];
+  preferred_qualifications: string[];
+  keywords: string[];
+  red_flags: string[];
+  model_used?: string | null;
+  analysis_metadata?: Record<string, any> | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JobAnalysisListResponse {
+  items: JobAnalysis[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 // --- Phase 4: Job Discovery & Adapter Types ---

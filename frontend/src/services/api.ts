@@ -15,6 +15,9 @@ import {
   DiscoveryRunListResponse,
   SearchProfile,
   SearchProfileListResponse,
+  LLMStatusResponse,
+  JobAnalysis,
+  JobAnalysisListResponse,
   APIErrorResponse,
   CandidateProfile,
   WorkExperience,
@@ -99,6 +102,47 @@ export const api = {
   async testError(errorType: string): Promise<any> {
     const res = await fetch(`${API_BASE}/test-error?error_type=${errorType}`);
     return handleResponse<any>(res);
+  },
+
+  // --- Phase 5: Local LLM JD Analysis & Candidate Matching ---
+  async getLLMStatus(): Promise<LLMStatusResponse> {
+    const res = await fetch(`${API_BASE}/llm/status`);
+    return handleResponse<LLMStatusResponse>(res);
+  },
+
+  async analyzeJob(jobId: number, payload?: { candidate_profile_id?: number; custom_instructions?: string }): Promise<JobAnalysis> {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return handleResponse<JobAnalysis>(res);
+  },
+
+  async getJobAnalysis(jobId: number): Promise<JobAnalysis> {
+    const res = await fetch(`${API_BASE}/jobs/${jobId}/analysis`);
+    return handleResponse<JobAnalysis>(res);
+  },
+
+  async getJobAnalyses(params: {
+    page?: number;
+    page_size?: number;
+    fit_level?: string;
+    recommendation?: string;
+  } = {}): Promise<JobAnalysisListResponse> {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page.toString());
+    if (params.page_size) query.append('page_size', params.page_size.toString());
+    if (params.fit_level && params.fit_level !== 'all') query.append('fit_level', params.fit_level);
+    if (params.recommendation && params.recommendation !== 'all') query.append('recommendation', params.recommendation);
+
+    const res = await fetch(`${API_BASE}/analyses?${query.toString()}`);
+    return handleResponse<JobAnalysisListResponse>(res);
+  },
+
+  async getAnalysisById(id: number): Promise<JobAnalysis> {
+    const res = await fetch(`${API_BASE}/analyses/${id}`);
+    return handleResponse<JobAnalysis>(res);
   },
 
   // --- Phase 4: Job Discovery Framework ---

@@ -5,7 +5,7 @@ from app.models.base import TimestampMixin
 
 
 class Resume(Base, TimestampMixin):
-    """Base master resume model (Phase 4 foundation)."""
+    """Base master resume model."""
 
     __tablename__ = "resumes"
 
@@ -26,20 +26,27 @@ class Resume(Base, TimestampMixin):
 
 
 class TailoredResume(Base, TimestampMixin):
-    """Tailored resume variant tailored to a specific job listing."""
+    """Tailored resume variant tailored to a specific job listing (Phase 5)."""
 
     __tablename__ = "tailored_resumes"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     job_id = Column(Integer, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False, index=True)
-    base_resume_id = Column(Integer, ForeignKey("resumes.id", ondelete="CASCADE"), nullable=False, index=True)
+    candidate_profile_id = Column(Integer, ForeignKey("candidate_profiles.id", ondelete="SET NULL"), nullable=True, index=True)
+    base_resume_id = Column(Integer, ForeignKey("resumes.id", ondelete="CASCADE"), nullable=True, index=True)
     tailored_summary = Column(Text, nullable=True)
     tailored_experience = Column(JSON, nullable=True, default=list)
     highlighted_skills = Column(JSON, nullable=True, default=list)
+    cover_letter = Column(Text, nullable=True)
+    markdown_content = Column(Text, nullable=True)
     diff_summary = Column(Text, nullable=True)
     file_path = Column(String(1024), nullable=True)
+    model_used = Column(String(100), nullable=True)
+    generation_metadata = Column(JSON, nullable=True, default=dict)
+    status = Column(String(50), default="generated", nullable=False)  # generated, ready_for_review, applied
 
     # Relationships
     job = relationship("Job", back_populates="tailored_resumes")
     base_resume = relationship("Resume", back_populates="tailored_versions")
+    candidate_profile = relationship("CandidateProfile", foreign_keys=[candidate_profile_id])
     applications = relationship("Application", back_populates="tailored_resume")

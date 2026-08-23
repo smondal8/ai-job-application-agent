@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # Local Storage Directory
     STORAGE_DIR: str = "./data/storage"
 
+    # Local LLM Subsystem (Ollama on Apple Silicon GPU)
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    OLLAMA_MODEL: str = "qwen3:8b"
+    OLLAMA_TIMEOUT_SECONDS: float = 120.0
+    OLLAMA_TEMPERATURE: float = 0.1
+
     @property
     def is_sqlite(self) -> bool:
         return self.DATABASE_URL.startswith("sqlite")
@@ -53,8 +59,6 @@ class Settings(BaseSettings):
     def sqlite_db_path(self) -> Optional[Path]:
         if not self.is_sqlite:
             return None
-        # sqlite:///./data/job_agent.db -> ./data/job_agent.db
-        # sqlite:///:memory: -> None
         raw_path = self.DATABASE_URL.replace("sqlite:///", "")
         if raw_path == ":memory:":
             return None
@@ -82,6 +86,9 @@ class Settings(BaseSettings):
             "storage_dir": self.STORAGE_DIR,
             "log_level": self.LOG_LEVEL,
             "log_format": self.LOG_FORMAT,
+            "llm_provider": "ollama",
+            "llm_model": self.OLLAMA_MODEL,
+            "llm_base_url": self.OLLAMA_BASE_URL,
             "pipeline_stages": [
                 {
                     "stage_id": "core_foundation",
@@ -112,15 +119,22 @@ class Settings(BaseSettings):
                     "active": True,
                 },
                 {
+                    "stage_id": "jd_analysis_matching",
+                    "name": "Phase 5: Structured JD Analysis & Candidate Matching",
+                    "status": "ready",
+                    "description": "Structured output pipeline via local Ollama (qwen3:8b) for untrusted JD analysis, deterministic + semantic skill matching, and objective fit scoring",
+                    "active": True,
+                },
+                {
                     "stage_id": "resume_tailoring",
-                    "name": "Phase 5: JD Analysis & Resume Tailoring",
+                    "name": "Phase 6: Resume & Cover Letter Tailoring",
                     "status": "planned",
-                    "description": "Dynamic resume tailoring, cover letter generation, fit scoring",
+                    "description": "Grounded resume tailoring and personalized cover letter generation",
                     "active": False,
                 },
                 {
                     "stage_id": "browser_preparation",
-                    "name": "Phase 6: Human Approval & Browser Submission",
+                    "name": "Phase 7: Human Approval & Browser Submission",
                     "status": "planned",
                     "description": "Application review queue, portal navigation, and safe human-in-the-loop submission",
                     "active": False,

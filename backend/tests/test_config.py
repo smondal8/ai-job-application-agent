@@ -15,7 +15,7 @@ def test_settings_public_config():
     assert "app_name" in public_config
     assert "app_version" in public_config
     assert "pipeline_stages" in public_config
-    assert len(public_config["pipeline_stages"]) == 6
+    assert len(public_config["pipeline_stages"]) >= 6
 
     # Verify Phase 1 is ready and active
     phase1 = public_config["pipeline_stages"][0]
@@ -41,11 +41,23 @@ def test_settings_public_config():
     assert phase4["status"] == "ready"
     assert phase4["active"] is True
 
-    # Verify Phase 5 is planned
+    # Verify Phase 5 is ready and active
     phase5 = public_config["pipeline_stages"][4]
-    assert phase5["stage_id"] == "resume_tailoring"
-    assert phase5["status"] == "planned"
-    assert phase5["active"] is False
+    assert phase5["stage_id"] == "jd_analysis_matching"
+    assert phase5["status"] == "ready"
+    assert phase5["active"] is True
+
+    # Verify Phase 6 is planned
+    phase6 = public_config["pipeline_stages"][5]
+    assert phase6["stage_id"] == "resume_tailoring"
+    assert phase6["status"] == "planned"
+    assert phase6["active"] is False
+
+    # Verify Phase 7 is planned
+    phase7 = public_config["pipeline_stages"][6]
+    assert phase7["stage_id"] == "browser_preparation"
+    assert phase7["status"] == "planned"
+    assert phase7["active"] is False
 
 
 def test_sqlite_db_path_handling():

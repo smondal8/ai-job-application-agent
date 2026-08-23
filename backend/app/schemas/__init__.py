@@ -63,6 +63,17 @@ from app.schemas.discovery import (
     SearchProfileResponse,
     SearchProfileListResponse,
 )
+from app.schemas.analysis import (
+    LLMStatusResponse,
+    JobAnalysisRequest,
+    JobAnalysisResponse,
+    JobAnalysisListResponse,
+)
+from app.schemas.tailoring import (
+    ResumeTailoringRequest,
+    TailoredResumeResponse,
+    TailoredResumeListResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -119,4 +130,11 @@ __all__ = [
     "SearchProfileCreate",
     "SearchProfileResponse",
     "SearchProfileListResponse",
+    "LLMStatusResponse",
+    "JobAnalysisRequest",
+    "JobAnalysisResponse",
+    "JobAnalysisListResponse",
+    "ResumeTailoringRequest",
+    "TailoredResumeResponse",
+    "TailoredResumeListResponse",
 ]

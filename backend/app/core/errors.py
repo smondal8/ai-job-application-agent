@@ -49,6 +49,9 @@ class AppException(Exception):
         self.details = details
 
 
+AppError = AppException
+
+
 class NotFoundError(AppException):
     """Raised when a requested resource is not found."""
 
