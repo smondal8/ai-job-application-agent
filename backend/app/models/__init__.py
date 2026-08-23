@@ -1,6 +1,8 @@
 from app.core.database import Base
 from app.models.base import TimestampMixin
 from app.models.job import Job
+from app.models.company import Company
+from app.models.ingestion import JobIngestionBatch
 from app.models.analysis import JobAnalysis
 from app.models.resume import Resume, TailoredResume
 from app.models.approval import ApplicationReview
@@ -19,6 +21,8 @@ __all__ = [
     "Base",
     "TimestampMixin",
     "Job",
+    "Company",
+    "JobIngestionBatch",
     "JobAnalysis",
     "Resume",
     "TailoredResume",

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import {
   Layers,
   UserCheck,
+  Briefcase,
   FileSearch,
   FileText,
-  CheckCircle,
   Globe,
   Code,
 } from 'lucide-react';
@@ -15,7 +15,7 @@ interface PipelineOverviewProps {
 }
 
 export const PipelineOverview: React.FC<PipelineOverviewProps> = () => {
-  const [selectedStage, setSelectedStage] = useState<string>('candidate_profile');
+  const [selectedStage, setSelectedStage] = useState<string>('job_database');
 
   const stageDetails: Record<
     string,
@@ -51,7 +51,7 @@ interface APIResponse<T> {
     },
     candidate_profile: {
       title: 'Candidate Profile & Master Resume',
-      phase: 'Phase 2 (Active)',
+      phase: 'Phase 2 (Complete)',
       icon: <UserCheck size={24} color="#34d399" />,
       status: 'active',
       description:
@@ -71,9 +71,31 @@ interface VerifiedGroundTruthContext {
   formatted_llm_prompt_context: string;
 }`,
     },
+    job_database: {
+      title: 'Normalized Job DB & Ingestion',
+      phase: 'Phase 3 (Active)',
+      icon: <Briefcase size={24} color="#38bdf8" />,
+      status: 'active',
+      description:
+        'Normalized job listings catalog and ingestion pipeline supporting JSON and CSV feeds. Features company registry normalization and deterministic conservative deduplication preserving distinct roles and locations.',
+      inputs: ['JSON Feeds', 'CSV Fixtures', 'File Uploads', 'Manual Postings'],
+      outputs: ['Normalized Job Catalog', 'Registered Companies', 'Batch Ingestion Ledger'],
+      tables: ['jobs', 'companies', 'job_ingestion_batches', 'audit_logs'],
+      contract: `// Phase 3 Ingestion Batch Response
+interface JobIngestionBatchResponse {
+  batch_id: string;
+  source: string;
+  total_records: number;
+  inserted_count: number;
+  updated_count: number;
+  duplicate_count: number;
+  error_count: number;
+  status: 'completed' | 'failed';
+}`,
+    },
     jd_analysis: {
       title: 'JD Analysis & Match Scoring',
-      phase: 'Phase 3 (Planned)',
+      phase: 'Phase 4 (Planned)',
       icon: <FileSearch size={24} color="#ec4899" />,
       status: 'planned',
       description:
@@ -91,7 +113,7 @@ interface VerifiedGroundTruthContext {
     },
     resume_tailoring: {
       title: 'Resume Tailoring & Generation',
-      phase: 'Phase 4 (Planned)',
+      phase: 'Phase 5 (Planned)',
       icon: <FileText size={24} color="#f59e0b" />,
       status: 'planned',
       description:
@@ -106,40 +128,24 @@ interface VerifiedGroundTruthContext {
   highlighted_skills: string[];
 }`,
     },
-    human_approval: {
-      title: 'Human-in-the-Loop Review & Approval',
-      phase: 'Phase 5 (Planned)',
-      icon: <CheckCircle size={24} color="#a855f7" />,
-      status: 'planned',
-      description:
-        'Interactive approval queue where user inspects tailored resume, match score, form answers, and makes manual edits before granting submission permission.',
-      inputs: ['Application Draft', 'Tailored Resume', 'Form Field Answers'],
-      outputs: ['ApplicationReview record', 'Approved Application state (APPROVED)'],
-      tables: ['applications', 'application_reviews', 'audit_logs'],
-      contract: `interface ApprovalContract {
-  application_id: number;
-  decision: 'approved' | 'rejected' | 'changes_requested';
-}`,
-    },
     browser_preparation: {
-      title: 'Browser Automation & Portal Submission',
+      title: 'Human Review & Portal Submission',
       phase: 'Phase 6 (Planned)',
-      icon: <Globe size={24} color="#3b82f6" />,
+      icon: <Globe size={24} color="#a855f7" />,
       status: 'planned',
       description:
-        'Assisted or automated portal navigation (Greenhouse, Lever, Workday, etc.), form auto-filling, file attachment, with final human confirmation gate before submission.',
+        'Application approval queue and assisted portal navigation with final human confirmation gate before submission.',
       inputs: ['Approved Application', 'Tailored PDF', 'Candidate Metadata'],
       outputs: ['Application Status: submitted', 'Confirmation Receipt', 'AuditLog record'],
-      tables: ['applications', 'audit_logs'],
+      tables: ['applications', 'application_reviews', 'audit_logs'],
       contract: `interface BrowserSubmissionContract {
   application_id: number;
-  portal_type: 'greenhouse' | 'lever' | 'workday' | 'generic';
   status: 'submitted' | 'failed';
 }`,
     },
   };
 
-  const currentDetail = stageDetails[selectedStage] || stageDetails['candidate_profile'];
+  const currentDetail = stageDetails[selectedStage] || stageDetails['job_database'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -148,8 +154,7 @@ interface VerifiedGroundTruthContext {
           End-to-End Pipeline Architecture
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-          The AI Job Application Agent executes as a sequential, human-in-the-loop autonomous pipeline.
-          Phase 2 establishes the verified candidate profile and master resume subsystem.
+          Sequential, human-in-the-loop autonomous pipeline architecture. Phase 3 provides the normalized job database and ingestion layer.
         </p>
       </div>
 
@@ -212,7 +217,7 @@ interface VerifiedGroundTruthContext {
       </div>
 
       {/* Selected Stage Deep-Dive Card */}
-      <div className="card" style={{ borderTop: `3px solid ${currentDetail.status === 'active' ? '#34d399' : '#64748b'}` }}>
+      <div className="card" style={{ borderTop: `3px solid ${currentDetail.status === 'active' ? '#38bdf8' : '#64748b'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {currentDetail.icon}
