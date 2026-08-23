@@ -7,7 +7,15 @@ from app.services.discovery.registry import discovery_registry, DiscoveryAdapter
 from app.services.discovery.orchestrator import discovery_orchestrator, DiscoveryOrchestrationService
 from app.services.llm.ollama_service import ollama_service, OllamaLLMService
 from app.services.jd_analysis_service import jd_analysis_service, JDAnalysisService
-from app.services.resume_tailoring_service import resume_tailoring_service, ResumeTailoringService
+from app.services.tailoring import (
+    resume_tailoring_service,
+    ResumeTailoringService,
+    traceability_validator,
+    TraceabilityValidator,
+    resume_document_compiler,
+    ResumeDocumentCompiler,
+    AtomicFactRegistry,
+)
 
 __all__ = [
     "storage_service",
@@ -30,4 +38,9 @@ __all__ = [
     "JDAnalysisService",
     "resume_tailoring_service",
     "ResumeTailoringService",
+    "traceability_validator",
+    "TraceabilityValidator",
+    "resume_document_compiler",
+    "ResumeDocumentCompiler",
+    "AtomicFactRegistry",
 ]

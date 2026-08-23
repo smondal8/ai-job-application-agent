@@ -1,10 +1,11 @@
 import React from 'react';
 import {
   LayoutDashboard,
+  FileText,
+  Brain,
   Compass,
   Briefcase,
   UserCheck,
-  Brain,
   GitMerge,
   Database,
   Sliders,
@@ -12,7 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export type NavTab = 'overview' | 'analysis' | 'discovery' | 'jobs' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
+export type NavTab = 'overview' | 'tailoring' | 'analysis' | 'discovery' | 'jobs' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -25,6 +26,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'overview',
       label: 'System Overview',
       icon: <LayoutDashboard size={18} />,
+    },
+    {
+      id: 'tailoring',
+      label: 'Resume Tailoring Studio',
+      icon: <FileText size={18} />,
+      badge: 'Phase 6',
     },
     {
       id: 'analysis',
@@ -78,13 +85,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
     <aside className="sidebar">
       <div style={{ padding: '1.5rem 1.25rem', borderBottom: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <Sparkles size={20} color="#c084fc" />
+          <Sparkles size={20} color="#34d399" />
           <span style={{ fontWeight: 600, fontSize: '0.875rem', letterSpacing: '0.025em' }}>
-            Phase 5 Active
+            Phase 6 Active
           </span>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-          Local Ollama LLM (qwen3:8b) on Apple Silicon GPU for JD Analysis & Candidate Matching.
+          Grounded Resume Tailoring, Atomic Fact Traceability (<code>source_fact_ids</code>) & Deterministic Document Compilation.
         </p>
       </div>
 
@@ -97,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
             key={item.id}
             onClick={() => onSelectTab(item.id)}
             className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-            style={{ width: '100%', border: 'none', background: activeTab === item.id ? 'rgba(192, 132, 252, 0.12)' : 'transparent', textAlign: 'left' }}
+            style={{ width: '100%', border: 'none', background: activeTab === item.id ? 'rgba(52, 211, 153, 0.12)' : 'transparent', textAlign: 'left' }}
           >
             {item.icon}
             <span style={{ flex: 1 }}>{item.label}</span>
@@ -108,7 +115,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                   padding: '0.125rem 0.375rem',
                   borderRadius: '4px',
                   backgroundColor:
-                    item.badge === 'Phase 5'
+                    item.badge === 'Phase 6'
+                      ? 'rgba(52, 211, 153, 0.2)'
+                      : item.badge === 'Phase 5'
                       ? 'rgba(192, 132, 252, 0.2)'
                       : item.badge === 'Phase 4'
                       ? 'rgba(56, 189, 248, 0.2)'
@@ -118,7 +127,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                       ? 'rgba(52, 211, 153, 0.2)'
                       : '#1e293b',
                   color:
-                    item.badge === 'Phase 5'
+                    item.badge === 'Phase 6'
+                      ? '#34d399'
+                      : item.badge === 'Phase 5'
                       ? '#c084fc'
                       : item.badge === 'Phase 4'
                       ? '#38bdf8'
@@ -137,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       </nav>
 
       <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <div>Branch: <code style={{ color: '#c084fc' }}>feature/phase-05</code></div>
+        <div>Branch: <code style={{ color: '#34d399' }}>feature/phase-06</code></div>
         <div>LLM: <code style={{ color: 'var(--text-secondary)' }}>Ollama (qwen3:8b)</code></div>
       </div>
     </aside>

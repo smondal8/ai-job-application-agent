@@ -7,12 +7,12 @@ from app.models.candidate import CandidateProfile, WorkExperience, CandidateSkil
 from app.models.analysis import JobAnalysis
 from app.models.resume import TailoredResume
 from app.models.audit import AuditLog
-from app.services.resume_tailoring_service import resume_tailoring_service
+from app.services.tailoring.tailoring_service import resume_tailoring_service
 
 
 @pytest.mark.asyncio
-async def test_resume_tailoring_service_execution(db_session: Session):
-    # 1. Setup candidate profile
+async def test_resume_tailoring_service_grounded_execution(db_session: Session):
+    # 1. Setup candidate profile with verified facts
     profile = CandidateProfile(
         full_name="Morgan Reed",
         email="morgan.reed@example.com",
@@ -43,9 +43,11 @@ async def test_resume_tailoring_service_execution(db_session: Session):
         end_date="2020",
         is_verified=True,
     )
-    skill = CandidateSkill(profile_id=profile.id, name="FastAPI", category="frameworks", proficiency="expert", is_verified=True)
-    db_session.add_all([exp, edu, skill])
+    skill1 = CandidateSkill(profile_id=profile.id, name="FastAPI", category="frameworks", proficiency="expert", is_verified=True)
+    skill2 = CandidateSkill(profile_id=profile.id, name="Python", category="languages", proficiency="expert", is_verified=True)
+    db_session.add_all([exp, edu, skill1, skill2])
     db_session.commit()
+    db_session.refresh(exp)
 
     # 2. Setup Job listing and Analysis
     job = Job(
@@ -72,10 +74,16 @@ async def test_resume_tailoring_service_execution(db_session: Session):
     db_session.add(analysis)
     db_session.commit()
 
-    # 3. Mock Ollama response
+    # 3. Mock Ollama response with explicit source_fact_ids
     mock_tailored_json = {
-        "tailored_summary": "Senior AI Engineer specializing in local LLM optimization and multi-agent orchestrations.",
-        "highlighted_skills": ["FastAPI", "Python", "Ollama", "PyTorch"],
+        "tailored_summary": {
+            "text": "Senior AI Engineer specializing in local LLM optimization and multi-agent systems.",
+            "source_fact_ids": [f"profile:{profile.id}:headline", f"exp:{exp.id}"],
+        },
+        "highlighted_skills": [
+            {"name": "FastAPI", "source_fact_ids": [f"skill:{skill1.id}"]},
+            {"name": "Python", "source_fact_ids": [f"skill:{skill2.id}"]},
+        ],
         "tailored_experience": [
             {
                 "company": "Anthropic",
@@ -84,12 +92,29 @@ async def test_resume_tailoring_service_execution(db_session: Session):
                 "end_date": None,
                 "is_current": True,
                 "tailored_highlights": [
-                    "Optimized local LLM inference pipelines achieving sub-10ms response times.",
-                    "Architected scalable tool-use and multi-agent framework.",
+                    {
+                        "text": "Optimized local LLM inference pipelines achieving sub-10ms response times on Apple Silicon.",
+                        "source_fact_ids": [f"exp:{exp.id}:h0"],
+                    },
+                    {
+                        "text": "Architected scalable tool-use and multi-agent framework.",
+                        "source_fact_ids": [f"exp:{exp.id}:h1"],
+                    },
                 ],
             }
         ],
-        "cover_letter": "Dear OpenAI Hiring Team,\n\nI am thrilled to apply for the Staff Autonomous Agent Engineer role...\n\nSincerely,\nMorgan Reed",
+        "cover_letter_paragraphs": [
+            {
+                "paragraph_type": "opening",
+                "text": "I am eager to apply for the Staff Autonomous Agent Engineer role at OpenAI.",
+                "source_fact_ids": [f"profile:{profile.id}:headline"],
+            },
+            {
+                "paragraph_type": "body_experience",
+                "text": "At Anthropic, I optimized local LLM inference and tool use frameworks.",
+                "source_fact_ids": [f"exp:{exp.id}:h0", f"exp:{exp.id}:h1"],
+            },
+        ],
         "diff_summary": "Emphasized local LLM inference speedups and multi-agent architectural accomplishments.",
     }
 
@@ -106,14 +131,19 @@ async def test_resume_tailoring_service_execution(db_session: Session):
         assert tailored.id is not None
         assert tailored.job_id == job.id
         assert tailored.candidate_profile_id == profile.id
+        assert tailored.prompt_version == "v1.0.0"
+        assert tailored.validation_status == "valid"
+        assert tailored.validation_details["traceability_score"] == 100.0
         assert "Senior AI Engineer" in tailored.tailored_summary
         assert "Dear OpenAI Hiring Team" in tailored.cover_letter
-        assert len(tailored.highlighted_skills) == 4
-        assert "# Morgan Reed" in tailored.markdown_content
-        assert "## Professional Experience" in tailored.markdown_content
+        assert len(tailored.highlighted_skills) == 2
+        assert "# Morgan Reed" in tailored.compiled_markdown
+        assert "## Professional Experience" in tailored.compiled_markdown
+        assert tailored.compiled_text is not None
+        assert tailored.compiled_html is not None
         assert tailored.status == "ready_for_review"
 
         # Verify Audit Log
-        audit = db_session.query(AuditLog).filter(AuditLog.action == "RESUME_TAILORED").first()
+        audit = db_session.query(AuditLog).filter(AuditLog.action == "RESUME_TAILORED_GROUNDED").first()
         assert audit is not None
         assert f"job {job.id}" in audit.message

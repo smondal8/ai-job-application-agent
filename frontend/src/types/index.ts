@@ -76,6 +76,87 @@ export interface APIErrorResponse {
   };
 }
 
+// --- Phase 6: Grounded Resume Tailoring & Document Compilation Types ---
+
+export interface UntracedClaim {
+  section: string;
+  text: string;
+  invalid_fact_ids: string[];
+  reason: string;
+}
+
+export interface ValidationDetails {
+  is_valid: boolean;
+  traceability_score: number;
+  total_claims: number;
+  verified_claims: number;
+  untraced_claims: UntracedClaim[];
+  warnings: string[];
+}
+
+export interface ResumeTailoringRequest {
+  candidate_profile_id?: number | null;
+  tone?: string;
+  target_role_title?: string | null;
+  custom_instructions?: string | null;
+  auto_regenerate_on_untraced?: boolean;
+}
+
+export interface TailoredResumeApprovalRequest {
+  approver_notes?: string | null;
+}
+
+export interface TailoredResume {
+  id: number;
+  job_id: number;
+  candidate_profile_id?: number | null;
+  job_analysis_id?: number | null;
+  base_resume_id?: number | null;
+  prompt_version: string;
+  model_used?: string | null;
+  generation_metadata?: Record<string, any> | null;
+  tailored_summary?: string | null;
+  tailored_experience: Array<{
+    company: string;
+    position: string;
+    start_date?: string;
+    end_date?: string | null;
+    is_current?: boolean;
+    tailored_highlights: Array<{
+      text: string;
+      source_fact_ids: string[];
+    }>;
+  }>;
+  highlighted_skills: string[];
+  cover_letter?: string | null;
+  cover_letter_paragraphs?: Array<{
+    paragraph_type: string;
+    text: string;
+    source_fact_ids: string[];
+  }>;
+  diff_summary?: string | null;
+  compiled_markdown?: string | null;
+  compiled_text?: string | null;
+  compiled_html?: string | null;
+  markdown_content?: string | null;
+  file_path?: string | null;
+  traceability_matrix?: Record<string, string[]> | null;
+  validation_status: 'valid' | 'requires_human_review' | 'rejected';
+  validation_details?: ValidationDetails | null;
+  human_approved_at?: string | null;
+  human_approver_notes?: string | null;
+  status: 'draft' | 'ready_for_review' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TailoredResumeListResponse {
+  items: TailoredResume[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 // --- Phase 5: Local LLM JD Analysis & Candidate Matching Types ---
 
 export interface LLMStatusResponse {

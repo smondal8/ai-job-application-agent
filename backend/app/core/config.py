@@ -127,10 +127,10 @@ class Settings(BaseSettings):
                 },
                 {
                     "stage_id": "resume_tailoring",
-                    "name": "Phase 6: Resume & Cover Letter Tailoring",
-                    "status": "planned",
-                    "description": "Grounded resume tailoring and personalized cover letter generation",
-                    "active": False,
+                    "name": "Phase 6: Grounded Resume Tailoring & Document Compilation",
+                    "status": "ready",
+                    "description": "Grounded resume and cover letter tailoring with atomic source fact traceability, strict claim validation, and deterministic document compilation",
+                    "active": True,
                 },
                 {
                     "stage_id": "browser_preparation",

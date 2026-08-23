@@ -145,19 +145,32 @@ interface JobAnalysisResponse {
 }`,
     },
     resume_tailoring: {
-      title: 'Resume & Cover Letter Tailoring',
-      phase: 'Phase 6 (Planned)',
-      icon: <FileText size={24} color="#a855f7" />,
-      status: 'planned',
+      title: 'Resume & Cover Letter Tailoring Studio',
+      phase: 'Phase 6 (Active)',
+      icon: <FileText size={24} color="#34d399" />,
+      status: 'active',
       description:
-        'Grounded resume tailoring and personalized cover letter generation strictly from verified candidate facts.',
-      inputs: ['JobAnalysis Artifact', 'Verified Candidate Facts'],
-      outputs: ['Tailored Resume (PDF/Markdown)', 'Personalized Cover Letter'],
-      tables: ['tailored_resumes', 'audit_logs'],
-      contract: `interface TailoredResumeContract {
+        'Grounded resume tailoring and personalized cover letter generation with atomic fact attribution (source_fact_ids), claim validation, and deterministic document compilation (Markdown/ASCII/HTML).',
+      inputs: ['JobAnalysis Artifact', 'Atomic Verified Candidate Facts (source_fact_ids)', 'Writing Tone & Strategic Guidance'],
+      outputs: ['ATS Markdown Resume', 'Plain ASCII Text', 'Styled HTML Document', 'Personalized Cover Letter', 'Traceability Matrix'],
+      tables: ['tailored_resumes', 'job_analyses', 'audit_logs'],
+      contract: `// Phase 6 Grounded Tailoring Contract
+interface TailoredResumeResponse {
   job_id: number;
-  markdown_content: string;
+  prompt_version: 'v1.0.0';
+  tailored_summary: string;
+  tailored_experience: Array<{
+    company: string;
+    position: string;
+    tailored_highlights: Array<{ text: string; source_fact_ids: string[] }>;
+  }>;
+  highlighted_skills: string[];
   cover_letter: string;
+  compiled_markdown: string;
+  compiled_text: string;
+  compiled_html: string;
+  validation_status: 'valid' | 'requires_human_review' | 'rejected';
+  traceability_matrix: Record<string, string[]>;
 }`,
     },
     browser_preparation: {
