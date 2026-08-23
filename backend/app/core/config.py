@@ -91,11 +91,11 @@ class Settings(BaseSettings):
                     "active": True,
                 },
                 {
-                    "stage_id": "job_discovery",
-                    "name": "Phase 2: Job Discovery & Scraping",
-                    "status": "planned",
-                    "description": "Job board adapters, scrapers, search query filters",
-                    "active": False,
+                    "stage_id": "candidate_profile",
+                    "name": "Phase 2: Candidate Profile & Master Resume",
+                    "status": "ready",
+                    "description": "Verified candidate facts, master resume subsystem, untrusted parser & LLM ground truth boundary",
+                    "active": True,
                 },
                 {
                     "stage_id": "jd_analysis",

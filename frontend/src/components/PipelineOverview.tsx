@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
   Layers,
-  Search,
+  UserCheck,
   FileSearch,
   FileText,
-  UserCheck,
+  CheckCircle,
   Globe,
   Code,
 } from 'lucide-react';
@@ -15,7 +15,7 @@ interface PipelineOverviewProps {
 }
 
 export const PipelineOverview: React.FC<PipelineOverviewProps> = () => {
-  const [selectedStage, setSelectedStage] = useState<string>('core_foundation');
+  const [selectedStage, setSelectedStage] = useState<string>('candidate_profile');
 
   const stageDetails: Record<
     string,
@@ -33,7 +33,7 @@ export const PipelineOverview: React.FC<PipelineOverviewProps> = () => {
   > = {
     core_foundation: {
       title: 'Foundation & Core Infrastructure',
-      phase: 'Phase 1 (Current)',
+      phase: 'Phase 1 (Complete)',
       icon: <Layers size={24} color="#38bdf8" />,
       status: 'active',
       description:
@@ -49,23 +49,26 @@ interface APIResponse<T> {
   timestamp: string;
 }`,
     },
-    job_discovery: {
-      title: 'Job Discovery & Scraping',
-      phase: 'Phase 2 (Planned)',
-      icon: <Search size={24} color="#a855f7" />,
-      status: 'planned',
+    candidate_profile: {
+      title: 'Candidate Profile & Master Resume',
+      phase: 'Phase 2 (Active)',
+      icon: <UserCheck size={24} color="#34d399" />,
+      status: 'active',
       description:
-        'Automated ingestion of target positions from job portals, company ATS career pages (Greenhouse, Lever, Workday), RSS feeds, and manual URL input.',
-      inputs: ['Search Queries', 'Target Companies', 'Location Filters', 'Portal URLs'],
-      outputs: ['Normalized Job Postings in DB with status: discovered'],
-      tables: ['jobs'],
-      contract: `interface JobDiscoveryContract {
-  title: string;
-  company: string;
-  location?: string;
-  remote_type?: 'remote' | 'hybrid' | 'onsite';
-  source: 'greenhouse' | 'lever' | 'workday' | 'manual';
-  description_raw: string;
+        'Authoritative candidate profile and master resume ground truth subsystem. Features untrusted raw resume parsing, human verification gate, and strict LLM context retrieval service boundary.',
+      inputs: ['Raw Resume (PDF/TXT/MD/JSON)', 'User Manual Edits', 'Verification Actions'],
+      outputs: ['Verified Ground Truth Context for Downstream LLMs', 'CandidateProfile Schema v2'],
+      tables: ['candidate_profiles', 'work_experiences', 'educations', 'candidate_skills', 'projects', 'raw_resume_imports', 'audit_logs'],
+      contract: `// Authoritative LLM Context Boundary
+interface VerifiedGroundTruthContext {
+  profile_id: number;
+  profile_verified: boolean;
+  candidate: { full_name: string; email: string; ... };
+  experiences: VerifiedWorkExperience[];
+  educations: VerifiedEducation[];
+  skills: VerifiedCandidateSkill[];
+  projects: VerifiedProject[];
+  formatted_llm_prompt_context: string;
 }`,
     },
     jd_analysis: {
@@ -74,8 +77,8 @@ interface APIResponse<T> {
       icon: <FileSearch size={24} color="#ec4899" />,
       status: 'planned',
       description:
-        'Analyzes job descriptions using NLP/LLM to extract technical competencies, required qualifications, soft skills, and computes fit scores against candidate profiles.',
-      inputs: ['Job Description (description_raw)', 'Base Resume (Resume.skills)'],
+        'Analyzes job descriptions using NLP/LLM against verified candidate ground truth to extract technical competencies, required qualifications, soft skills, and match scoring.',
+      inputs: ['Job Description (description_raw)', 'Verified Candidate Profile'],
       outputs: ['Fit Score (0-100)', 'Matched Skills', 'Missing Skills', 'JobAnalysis entity'],
       tables: ['job_analyses', 'jobs'],
       contract: `interface JDAnalysisContract {
@@ -84,7 +87,6 @@ interface APIResponse<T> {
   fit_level: 'high' | 'medium' | 'low';
   matched_skills: string[];
   missing_skills: string[];
-  required_qualifications: string[];
 }`,
     },
     resume_tailoring: {
@@ -94,7 +96,7 @@ interface APIResponse<T> {
       status: 'planned',
       description:
         'Dynamically tailors master resume bullet points and summary to match job requirements without hallucination, generating tailored markdown, cover letters, and PDFs.',
-      inputs: ['Base Resume (Resume)', 'Job Analysis (JobAnalysis)'],
+      inputs: ['Verified Ground Truth Resume', 'Job Analysis (JobAnalysis)'],
       outputs: ['TailoredResume record', 'Custom Cover Letter', 'Generated PDF path'],
       tables: ['resumes', 'tailored_resumes'],
       contract: `interface ResumeTailoringContract {
@@ -102,13 +104,12 @@ interface APIResponse<T> {
   base_resume_id: number;
   tailored_summary: string;
   highlighted_skills: string[];
-  diff_summary: string;
 }`,
     },
     human_approval: {
       title: 'Human-in-the-Loop Review & Approval',
       phase: 'Phase 5 (Planned)',
-      icon: <UserCheck size={24} color="#10b981" />,
+      icon: <CheckCircle size={24} color="#a855f7" />,
       status: 'planned',
       description:
         'Interactive approval queue where user inspects tailored resume, match score, form answers, and makes manual edits before granting submission permission.',
@@ -118,8 +119,6 @@ interface APIResponse<T> {
       contract: `interface ApprovalContract {
   application_id: number;
   decision: 'approved' | 'rejected' | 'changes_requested';
-  reviewer_notes?: string;
-  manual_edits?: Record<string, any>;
 }`,
     },
     browser_preparation: {
@@ -136,24 +135,21 @@ interface APIResponse<T> {
   application_id: number;
   portal_type: 'greenhouse' | 'lever' | 'workday' | 'generic';
   status: 'submitted' | 'failed';
-  submitted_at: string;
-  submission_notes?: string;
 }`,
     },
   };
 
-  const currentDetail = stageDetails[selectedStage] || stageDetails['core_foundation'];
+  const currentDetail = stageDetails[selectedStage] || stageDetails['candidate_profile'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* Header */}
       <div>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>
           End-to-End Pipeline Architecture
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-          The AI Job Application Agent is engineered as a sequential, human-in-the-loop autonomous pipeline.
-          Phase 1 establishes the foundational infrastructure, data models, and API contracts.
+          The AI Job Application Agent executes as a sequential, human-in-the-loop autonomous pipeline.
+          Phase 2 establishes the verified candidate profile and master resume subsystem.
         </p>
       </div>
 
@@ -180,10 +176,9 @@ interface APIResponse<T> {
                 cursor: 'pointer',
                 borderRadius: '8px',
                 padding: '1rem',
-                border: `1px solid ${isSelected ? '#38bdf8' : isActive ? '#1e3a8a' : 'var(--border-color)'}`,
-                backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.1)' : isActive ? 'rgba(30, 58, 138, 0.2)' : '#131b2e',
+                border: `1px solid ${isSelected ? '#38bdf8' : isActive ? '#10b981' : 'var(--border-color)'}`,
+                backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.1)' : isActive ? 'rgba(16, 185, 129, 0.12)' : '#131b2e',
                 transition: 'all 0.2s',
-                position: 'relative',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -217,7 +212,7 @@ interface APIResponse<T> {
       </div>
 
       {/* Selected Stage Deep-Dive Card */}
-      <div className="card" style={{ borderTop: `3px solid ${currentDetail.status === 'active' ? '#38bdf8' : '#64748b'}` }}>
+      <div className="card" style={{ borderTop: `3px solid ${currentDetail.status === 'active' ? '#34d399' : '#64748b'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {currentDetail.icon}
@@ -275,7 +270,6 @@ interface APIResponse<T> {
           </div>
         </div>
 
-        {/* Contract Code Snippet */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>
             <Code size={14} />

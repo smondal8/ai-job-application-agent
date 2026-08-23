@@ -1,6 +1,6 @@
 # AI Job Application Agent — Operations & API Reference Guide
 
-This operational manual documents how to start, stop, monitor, and interact with the **AI Job Application Agent (Phase 1)** services, including detailed API endpoints, health probes, and error contract specifications.
+This operational manual documents how to start, stop, monitor, and interact with the **AI Job Application Agent** services, including detailed API endpoints, health probes, Candidate Profile & Master Resume endpoints, and error contract specifications.
 
 ---
 
@@ -77,16 +77,9 @@ make stop
 ./scripts/stop.sh
 ```
 
-Alternatively, kill by process name or port:
-```bash
-# Graceful stop by port
-kill $(lsof -t -i :8000) 2>/dev/null || true
-kill $(lsof -t -i :5173) 2>/dev/null || true
-```
-
 ---
 
-## 2. API Endpoints & Health Diagnostic Reference
+## 2. API Endpoints & Diagnostic Reference
 
 All API responses include standard headers:
 - `X-Request-ID`: Unique correlation tracking ID (e.g. `req-a1b2c3d4e5f6`).
@@ -104,33 +97,6 @@ Evaluates the entire backend subsystem, including database roundtrip query laten
 curl -X GET http://127.0.0.1:8000/health
 ```
 
-**Response (`200 OK`):**
-```json
-{
-  "status": "healthy",
-  "timestamp": "2026-08-23T13:18:09.835083+00:00",
-  "version": "0.1.0",
-  "uptime_seconds": 128.45,
-  "environment": "development",
-  "database": {
-    "status": "healthy",
-    "connected": true,
-    "latency_ms": 0.65,
-    "dialect": "sqlite",
-    "database_target": "/Users/soumyamondal/repo/ai-job-application-agent/backend/data/job_agent.db",
-    "error": null
-  },
-  "storage": {
-    "status": "healthy",
-    "storage_dir": "/Users/soumyamondal/repo/ai-job-application-agent/backend/data/storage",
-    "writable": true,
-    "error": null
-  }
-}
-```
-
----
-
 #### 2. Liveness Probe (`GET /health/live`)
 Ultra-lightweight ping probe for load balancers and process orchestrators to verify the process is alive without querying the database.
 
@@ -138,16 +104,6 @@ Ultra-lightweight ping probe for load balancers and process orchestrators to ver
 ```bash
 curl -X GET http://127.0.0.1:8000/health/live
 ```
-
-**Response (`200 OK`):**
-```json
-{
-  "status": "alive",
-  "timestamp": "2026-08-23T13:18:10.123456+00:00"
-}
-```
-
----
 
 #### 3. Readiness Probe (`GET /health/ready`)
 Traffic gating probe. Returns `HTTP 200 OK` if the database is reachable and storage is writable; otherwise returns `HTTP 503 Service Unavailable`.
@@ -157,176 +113,116 @@ Traffic gating probe. Returns `HTTP 200 OK` if the database is reachable and sto
 curl -X GET http://127.0.0.1:8000/health/ready
 ```
 
-**Response (`200 OK`):**
-```json
-{
-  "ready": true,
-  "status": "ready",
-  "timestamp": "2026-08-23T13:18:10.554321+00:00",
-  "checks": {
-    "database": true,
-    "storage": true
-  }
-}
-```
-
 ---
 
-### B. Configuration & Architecture Endpoints
+### B. Phase 2: Candidate Profile & Ground Truth Endpoints
 
-#### 1. System Metadata & Config (`GET /api/v1/config`)
-Returns sanitized environment configuration, active database type, storage directory, and feature states.
+#### 1. Primary Candidate Profile (`GET /api/v1/profile`)
+Retrieves the active candidate master profile including nested work experiences, educations, candidate skills, and projects.
 
-**Request:**
 ```bash
-curl -X GET http://127.0.0.1:8000/api/v1/config
+curl -X GET http://127.0.0.1:8000/api/v1/profile
 ```
 
-**Response (`200 OK`):**
+#### 2. Update Candidate Profile Basics (`PUT /api/v1/profile/{id}`)
+Update candidate legal name, headline, summary, contact details, and social links.
+
+```bash
+curl -X PUT http://127.0.0.1:8000/api/v1/profile/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "Alex Morgan",
+    "email": "alex.morgan@example.com",
+    "headline": "Senior AI Systems Architect",
+    "location": "San Francisco, CA"
+  }'
+```
+
+#### 3. Human Verification Gate (`POST /api/v1/profile/{id}/verify`)
+Approves and locks candidate facts as verified ground truth.
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/profile/1/verify?verify_all_children=true"
+```
+
+#### 4. Authoritative LLM Ground Truth Context (`GET /api/v1/profile/{id}/verified-context`)
+**CRITICAL SERVICE BOUNDARY FOR DOWNSTREAM AI MODULES**:
+Strictly returns ONLY facts where `is_verified == True`. Unverified draft facts are completely excluded. Missing fields remain omitted without hallucination.
+
+```bash
+curl -X GET http://127.0.0.1:8000/api/v1/profile/1/verified-context
+```
+
+**Response Payload (`200 OK`):**
 ```json
 {
-  "app_name": "AI Job Application Agent",
-  "app_version": "0.1.0",
-  "environment": "development",
-  "debug": true,
-  "api_v1_prefix": "/api/v1",
-  "database_type": "sqlite",
-  "storage_dir": "./data/storage",
-  "log_level": "INFO",
-  "log_format": "console",
-  "pipeline_stages": [
+  "profile_id": 1,
+  "profile_verified": true,
+  "verified_at": "2026-08-23T14:20:00+00:00",
+  "candidate": {
+    "full_name": "Alex Morgan",
+    "email": "alex.morgan@example.com",
+    "phone": "+1 (555) 019-2834",
+    "location": "San Francisco, CA",
+    "headline": "Senior AI Systems Architect",
+    "summary": "Distributed systems engineer specializing in LLM agents."
+  },
+  "experiences": [
     {
-      "stage_id": "core_foundation",
-      "name": "Phase 1: Foundation & Core Infrastructure",
-      "status": "ready",
-      "description": "FastAPI backend, SQLite DB, React dashboard, error contract, health checks",
-      "active": true
-    },
-    {
-      "stage_id": "job_discovery",
-      "name": "Phase 2: Job Discovery & Scraping",
-      "status": "planned",
-      "description": "Job board adapters, scrapers, search query filters",
-      "active": false
-    }
-  ]
-}
-```
-
----
-
-#### 2. Pipeline Stages Architecture (`GET /api/v1/pipeline`)
-Returns the complete 6-stage sequential pipeline status map.
-
-**Request:**
-```bash
-curl -X GET http://127.0.0.1:8000/api/v1/pipeline
-```
-
----
-
-#### 3. Error Contract Test Lab (`GET /api/v1/test-error`)
-Triggers various error types to verify conformity to the unified RFC-7807 error schema.
-
-**Request Examples:**
-```bash
-# Test 404 Not Found
-curl -X GET "http://127.0.0.1:8000/api/v1/test-error?error_type=not_found"
-
-# Test 400 Bad Request
-curl -X GET "http://127.0.0.1:8000/api/v1/test-error?error_type=bad_request"
-
-# Test 501 Pipeline Stage Disabled
-curl -X GET "http://127.0.0.1:8000/api/v1/test-error?error_type=pipeline_disabled"
-
-# Test 500 Safe Unhandled Exception
-curl -X GET "http://127.0.0.1:8000/api/v1/test-error?error_type=unhandled"
-```
-
-**Sample Error Response Payload (`404 Not Found`):**
-```json
-{
-  "error": {
-    "code": "RESOURCE_NOT_FOUND",
-    "message": "The requested test entity was not found.",
-    "details": {
-      "entity": "TestJob",
-      "id": 999
-    },
-    "request_id": "req-9a8b7c6d5e4f",
-    "timestamp": "2026-08-23T13:18:18.538799+00:00"
-  }
-}
-```
-
----
-
-### C. Foundational Data Endpoints
-
-#### 1. Jobs (`/api/v1/jobs`)
-
-- **List Jobs:**
-  ```bash
-  curl -X GET "http://127.0.0.1:8000/api/v1/jobs?page=1&page_size=10"
-  ```
-- **Create Job:**
-  ```bash
-  curl -X POST http://127.0.0.1:8000/api/v1/jobs \
-    -H "Content-Type: application/json" \
-    -d '{
-      "title": "Senior AI Systems Engineer",
+      "id": 1,
       "company": "DeepMind",
-      "location": "London, UK",
-      "remote_type": "hybrid",
-      "salary_min": "140000.00",
-      "salary_max": "180000.00",
-      "currency": "GBP",
-      "source": "manual",
-      "description_raw": "Seeking senior engineer experienced in LLM agent architectures."
-    }'
-  ```
-- **Get Job Details:**
-  ```bash
-  curl -X GET http://127.0.0.1:8000/api/v1/jobs/1
-  ```
-- **Delete Job:**
-  ```bash
-  curl -X DELETE http://127.0.0.1:8000/api/v1/jobs/1
-  ```
+      "position": "Research Engineer",
+      "start_date": "2022-01",
+      "end_date": null,
+      "is_current": true,
+      "highlights": ["Architected autonomous multi-agent systems."]
+    }
+  ],
+  "educations": [],
+  "skills": [
+    {"name": "Python", "category": "languages", "proficiency": "expert"},
+    {"name": "FastAPI", "category": "frameworks", "proficiency": "advanced"}
+  ],
+  "projects": [],
+  "stats": {
+    "verified_experiences_count": 1,
+    "verified_educations_count": 0,
+    "verified_skills_count": 2,
+    "verified_projects_count": 0,
+    "total_verified_facts": 4
+  },
+  "formatted_llm_prompt_context": "# AUTHORITATIVE CANDIDATE GROUND TRUTH (VERIFIED FACTS ONLY)\n**Candidate Name**: Alex Morgan\n..."
+}
+```
 
 ---
 
-#### 2. Resumes (`/api/v1/resumes`)
+### C. Phase 2: Raw Resume Ingestion & Storage
 
-- **List Resumes:**
-  ```bash
-  curl -X GET http://127.0.0.1:8000/api/v1/resumes
-  ```
-- **Create Resume Entry:**
-  ```bash
-  curl -X POST http://127.0.0.1:8000/api/v1/resumes \
-    -H "Content-Type: application/json" \
-    -d '{
-      "name": "Principal Engineer Master Resume",
-      "version": "1.0",
-      "skills": ["Python", "FastAPI", "React", "TypeScript", "SQLAlchemy", "SQLite"],
-      "summary": "Full-stack AI systems engineer specializing in robust agent pipelines.",
-      "is_default": true
-    }'
-  ```
+#### 1. Ingest Raw Pasted Resume Text (`POST /api/v1/resumes/imports/text`)
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/resumes/imports/text \
+  -H "Content-Type: application/json" \
+  -d '{
+    "raw_text": "Alex Morgan\nalex@example.com\nSkills: Python, FastAPI, Docker",
+    "label": "Imported Resume 2026"
+  }'
+```
 
----
+#### 2. Upload Raw Resume File (`POST /api/v1/resumes/imports/upload`)
+Securely stores uploaded file in `./data/storage/resumes/` (never in Git), computes SHA-256 integrity hash, and parses draft candidate facts.
 
-#### 3. Applications (`/api/v1/applications`)
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/resumes/imports/upload \
+  -F "file=@/path/to/resume.pdf"
+```
 
-- **List Applications:**
-  ```bash
-  curl -X GET http://127.0.0.1:8000/api/v1/applications
-  ```
-- **Get Application Details:**
-  ```bash
-  curl -X GET http://127.0.0.1:8000/api/v1/applications/1
-  ```
+#### 3. Transfer Draft Facts to Profile (`POST /api/v1/resumes/imports/{id}/apply-to-profile`)
+Transfers extracted draft facts into candidate profile entities with `is_verified: False` for human review.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/resumes/imports/1/apply-to-profile
+```
 
 ---
 
@@ -343,30 +239,11 @@ curl -X GET "http://127.0.0.1:8000/api/v1/test-error?error_type=unhandled"
 Database files and migrations are managed via **Alembic**:
 
 ```bash
-# Run latest database migrations
+# Run latest database migrations (Applies 0001 and 0002)
 make migrate
 # OR: ./scripts/migrate.sh
 
 # Inspect current migration version
 source .venv/bin/activate
 cd backend && alembic current
-
-# Generate a new migration after editing models
-cd backend && alembic revision --autogenerate -m "add_new_feature_columns"
-```
-
----
-
-## 4. Log Inspection & Tracing
-
-Logs include timestamp, level, correlation `request_id`, caller module, and line number:
-
-```
-[INFO    ] 2026-08-23 13:18:09 [req-dadccac870b3] app.main:36 - GET /health -> 200 (0.65 ms)
-[WARNING ] 2026-08-23 13:18:18 [req-dadccac870b3] app.errors:115 - AppException handled: [RESOURCE_NOT_FOUND] The requested test entity was not found. (status=404)
-```
-
-To filter logs by a specific correlation ID:
-```bash
-grep "req-dadccac870b3" backend.log
 ```

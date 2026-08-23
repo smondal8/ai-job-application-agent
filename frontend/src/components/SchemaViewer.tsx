@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Database, Key, Link as LinkIcon, Table } from 'lucide-react';
 
 export const SchemaViewer: React.FC = () => {
-  const [selectedTable, setSelectedTable] = useState<string>('jobs');
+  const [selectedTable, setSelectedTable] = useState<string>('candidate_profiles');
 
   const schemas: Record<
     string,
@@ -12,116 +12,124 @@ export const SchemaViewer: React.FC = () => {
       columns: { name: string; type: string; constraints: string; description: string }[];
     }
   > = {
+    candidate_profiles: {
+      description: 'Master candidate profile representing verified ground truth for downstream AI modules.',
+      phase: 'Phase 2 Active',
+      columns: [
+        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique profile identifier' },
+        { name: 'full_name', type: 'String(255)', constraints: 'NOT NULL, Indexed', description: 'Candidate legal full name' },
+        { name: 'email', type: 'String(255)', constraints: 'NOT NULL, Indexed', description: 'Primary contact email' },
+        { name: 'phone', type: 'String(50)', constraints: 'Nullable', description: 'Telephone number' },
+        { name: 'location', type: 'String(255)', constraints: 'Nullable', description: 'City, State/Country' },
+        { name: 'headline', type: 'String(255)', constraints: 'Nullable', description: 'Professional title/headline' },
+        { name: 'summary', type: 'Text', constraints: 'Nullable', description: 'Executive bio/summary' },
+        { name: 'website', type: 'String(512)', constraints: 'Nullable', description: 'Personal website' },
+        { name: 'linkedin_url', type: 'String(512)', constraints: 'Nullable', description: 'LinkedIn URL' },
+        { name: 'github_url', type: 'String(512)', constraints: 'Nullable', description: 'GitHub URL' },
+        { name: 'portfolio_url', type: 'String(512)', constraints: 'Nullable', description: 'Portfolio URL' },
+        { name: 'is_verified', type: 'Boolean', constraints: 'Default: False, Indexed', description: 'Human verification gate' },
+        { name: 'verified_at', type: 'DateTime', constraints: 'Nullable', description: 'Timestamp when approved' },
+        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Creation timestamp' },
+        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
+      ],
+    },
+    work_experiences: {
+      description: 'Verified employment and work history entries.',
+      phase: 'Phase 2 Active',
+      columns: [
+        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
+        { name: 'profile_id', type: 'Integer', constraints: 'FK -> candidate_profiles.id (CASCADE)', description: 'Parent profile' },
+        { name: 'company', type: 'String(255)', constraints: 'NOT NULL', description: 'Employer company' },
+        { name: 'position', type: 'String(255)', constraints: 'NOT NULL', description: 'Job title / position' },
+        { name: 'location', type: 'String(255)', constraints: 'Nullable', description: 'Work location' },
+        { name: 'start_date', type: 'String(50)', constraints: 'NOT NULL', description: 'Start date (YYYY-MM)' },
+        { name: 'end_date', type: 'String(50)', constraints: 'Nullable', description: 'End date (YYYY-MM)' },
+        { name: 'is_current', type: 'Boolean', constraints: 'Default: False', description: 'Currently working flag' },
+        { name: 'description', type: 'Text', constraints: 'Nullable', description: 'Overview description' },
+        { name: 'highlights', type: 'JSON', constraints: 'Default: []', description: 'Bullet achievements' },
+        { name: 'skills_used', type: 'JSON', constraints: 'Default: []', description: 'Skill tags applied' },
+        { name: 'is_verified', type: 'Boolean', constraints: 'Default: False, Indexed', description: 'Human verified flag' },
+        { name: 'order_index', type: 'Integer', constraints: 'Default: 0', description: 'Display order' },
+        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Creation timestamp' },
+        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
+      ],
+    },
+    educations: {
+      description: 'Candidate academic degrees and certifications.',
+      phase: 'Phase 2 Active',
+      columns: [
+        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
+        { name: 'profile_id', type: 'Integer', constraints: 'FK -> candidate_profiles.id (CASCADE)', description: 'Parent profile' },
+        { name: 'institution', type: 'String(255)', constraints: 'NOT NULL', description: 'University / College' },
+        { name: 'degree', type: 'String(255)', constraints: 'NOT NULL', description: 'Degree title' },
+        { name: 'field_of_study', type: 'String(255)', constraints: 'Nullable', description: 'Major / Field' },
+        { name: 'start_date', type: 'String(50)', constraints: 'Nullable', description: 'Start date' },
+        { name: 'end_date', type: 'String(50)', constraints: 'Nullable', description: 'Graduation date' },
+        { name: 'gpa', type: 'String(50)', constraints: 'Nullable', description: 'Grade point average' },
+        { name: 'highlights', type: 'JSON', constraints: 'Default: []', description: 'Honors & activities' },
+        { name: 'is_verified', type: 'Boolean', constraints: 'Default: False, Indexed', description: 'Human verified flag' },
+        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Creation timestamp' },
+        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
+      ],
+    },
+    candidate_skills: {
+      description: 'Categorized candidate technical competencies and proficiencies.',
+      phase: 'Phase 2 Active',
+      columns: [
+        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
+        { name: 'profile_id', type: 'Integer', constraints: 'FK -> candidate_profiles.id (CASCADE)', description: 'Parent profile' },
+        { name: 'name', type: 'String(100)', constraints: 'NOT NULL, Indexed', description: 'Skill name' },
+        { name: 'category', type: 'String(50)', constraints: 'Default: general', description: 'languages/frameworks/etc' },
+        { name: 'proficiency', type: 'String(50)', constraints: 'Default: intermediate', description: 'Skill level' },
+        { name: 'years_of_experience', type: 'Float', constraints: 'Nullable', description: 'Years of practice' },
+        { name: 'is_verified', type: 'Boolean', constraints: 'Default: False, Indexed', description: 'Human verified flag' },
+        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Creation timestamp' },
+        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
+      ],
+    },
+    projects: {
+      description: 'Candidate portfolio projects and open-source contributions.',
+      phase: 'Phase 2 Active',
+      columns: [
+        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
+        { name: 'profile_id', type: 'Integer', constraints: 'FK -> candidate_profiles.id (CASCADE)', description: 'Parent profile' },
+        { name: 'name', type: 'String(255)', constraints: 'NOT NULL', description: 'Project title' },
+        { name: 'description', type: 'Text', constraints: 'Nullable', description: 'Project summary' },
+        { name: 'url', type: 'String(512)', constraints: 'Nullable', description: 'Live / Repository URL' },
+        { name: 'highlights', type: 'JSON', constraints: 'Default: []', description: 'Key bullet points' },
+        { name: 'technologies', type: 'JSON', constraints: 'Default: []', description: 'Tech stack tags' },
+        { name: 'is_verified', type: 'Boolean', constraints: 'Default: False, Indexed', description: 'Human verified flag' },
+        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Creation timestamp' },
+        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
+      ],
+    },
+    raw_resume_imports: {
+      description: 'Untrusted uploaded resume files and parsed draft fact snapshots.',
+      phase: 'Phase 2 Active',
+      columns: [
+        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
+        { name: 'profile_id', type: 'Integer', constraints: 'FK -> candidate_profiles.id (CASCADE)', description: 'Target profile' },
+        { name: 'filename', type: 'String(255)', constraints: 'NOT NULL', description: 'Original uploaded filename' },
+        { name: 'file_path', type: 'String(1024)', constraints: 'NOT NULL', description: 'Secure local storage path' },
+        { name: 'file_hash', type: 'String(64)', constraints: 'NOT NULL, Indexed', description: 'SHA-256 integrity hash' },
+        { name: 'file_size_bytes', type: 'Integer', constraints: 'NOT NULL', description: 'Size on disk' },
+        { name: 'mime_type', type: 'String(100)', constraints: 'NOT NULL', description: 'MIME type' },
+        { name: 'raw_text', type: 'Text', constraints: 'Nullable', description: 'Extracted raw text' },
+        { name: 'parsed_data', type: 'JSON', constraints: 'Default: {}', description: 'Draft extracted facts' },
+        { name: 'status', type: 'String(50)', constraints: 'Default: uploaded', description: 'uploaded/parsed/applied' },
+        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Upload timestamp' },
+        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
+      ],
+    },
     jobs: {
       description: 'Stores discovered, scraped, and imported target job postings.',
-      phase: 'Phase 2 Foundation',
+      phase: 'Phase 1 Foundation',
       columns: [
         { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'external_id', type: 'String(255)', constraints: 'Nullable, Indexed', description: 'ATS/Board job ID' },
         { name: 'title', type: 'String(255)', constraints: 'NOT NULL, Indexed', description: 'Position title' },
         { name: 'company', type: 'String(255)', constraints: 'NOT NULL, Indexed', description: 'Company name' },
-        { name: 'location', type: 'String(255)', constraints: 'Nullable', description: 'City, State or Country' },
-        { name: 'remote_type', type: 'String(50)', constraints: 'Default: unspecified', description: 'remote / hybrid / onsite' },
-        { name: 'job_type', type: 'String(50)', constraints: 'Default: full-time', description: 'full-time / contract' },
-        { name: 'url', type: 'String(1024)', constraints: 'Nullable', description: 'Original job posting URL' },
-        { name: 'source', type: 'String(100)', constraints: 'Default: manual', description: 'greenhouse / lever / linkedin' },
-        { name: 'description_raw', type: 'Text', constraints: 'Nullable', description: 'Raw job description' },
-        { name: 'description_clean', type: 'Text', constraints: 'Nullable', description: 'Sanitized text' },
-        { name: 'salary_min', type: 'Numeric(12,2)', constraints: 'Nullable', description: 'Base minimum compensation' },
-        { name: 'salary_max', type: 'Numeric(12,2)', constraints: 'Nullable', description: 'Base maximum compensation' },
-        { name: 'currency', type: 'String(10)', constraints: 'Default: USD', description: 'Currency ISO' },
+        { name: 'location', type: 'String(255)', constraints: 'Nullable', description: 'Location' },
         { name: 'status', type: 'String(50)', constraints: 'Default: discovered', description: 'Pipeline lifecycle status' },
-        { name: 'posted_at', type: 'DateTime', constraints: 'Nullable', description: 'Date posted by employer' },
-        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Ingestion timestamp' },
-        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
-      ],
-    },
-    job_analyses: {
-      description: 'Stores JD analysis, skill match breakdown, and qualification scoring.',
-      phase: 'Phase 3 Foundation',
-      columns: [
-        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'job_id', type: 'Integer', constraints: 'FK -> jobs.id (CASCADE)', description: 'Associated job' },
-        { name: 'fit_score', type: 'Float', constraints: 'Nullable (0-100)', description: 'Overall candidate match score' },
-        { name: 'fit_level', type: 'String(50)', constraints: 'Nullable', description: 'high / medium / low' },
-        { name: 'summary', type: 'Text', constraints: 'Nullable', description: 'Executive match summary' },
-        { name: 'matched_skills', type: 'JSON', constraints: 'Default: []', description: 'Identified overlapping skills' },
-        { name: 'missing_skills', type: 'JSON', constraints: 'Default: []', description: 'Missing required keywords' },
-        { name: 'required_qualifications', type: 'JSON', constraints: 'Default: []', description: 'Must-have requirements' },
-        { name: 'preferred_qualifications', type: 'JSON', constraints: 'Default: []', description: 'Bonus qualifications' },
-        { name: 'keywords', type: 'JSON', constraints: 'Default: []', description: 'Extracted ATS keywords' },
-        { name: 'analysis_metadata', type: 'JSON', constraints: 'Default: {}', description: 'Model runtime metadata' },
-        { name: 'status', type: 'String(50)', constraints: 'Default: pending', description: 'pending / completed / failed' },
-        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Analysis timestamp' },
-        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
-      ],
-    },
-    resumes: {
-      description: 'Stores master base resumes and candidate background profiles.',
-      phase: 'Phase 4 Foundation',
-      columns: [
-        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'name', type: 'String(255)', constraints: 'NOT NULL', description: 'Profile / Resume label' },
-        { name: 'version', type: 'String(50)', constraints: 'Default: 1.0', description: 'Version tag' },
-        { name: 'contact_info', type: 'JSON', constraints: 'Default: {}', description: 'Name, email, phone, links' },
-        { name: 'summary', type: 'Text', constraints: 'Nullable', description: 'Professional summary' },
-        { name: 'skills', type: 'JSON', constraints: 'Default: []', description: 'Master skill taxonomy' },
-        { name: 'experience', type: 'JSON', constraints: 'Default: []', description: 'Work history records' },
-        { name: 'education', type: 'JSON', constraints: 'Default: []', description: 'Academic credentials' },
-        { name: 'raw_content', type: 'Text', constraints: 'Nullable', description: 'Full text or Markdown' },
-        { name: 'file_path', type: 'String(1024)', constraints: 'Nullable', description: 'Path to source PDF/DOCX' },
-        { name: 'is_default', type: 'Boolean', constraints: 'Default: false', description: 'Default template flag' },
-        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Creation timestamp' },
-        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
-      ],
-    },
-    tailored_resumes: {
-      description: 'Stores tailored resume variants generated for specific job postings.',
-      phase: 'Phase 4 Foundation',
-      columns: [
-        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'job_id', type: 'Integer', constraints: 'FK -> jobs.id (CASCADE)', description: 'Target job' },
-        { name: 'base_resume_id', type: 'Integer', constraints: 'FK -> resumes.id (CASCADE)', description: 'Base template' },
-        { name: 'tailored_summary', type: 'Text', constraints: 'Nullable', description: 'Targeted summary' },
-        { name: 'tailored_experience', type: 'JSON', constraints: 'Default: []', description: 'Aligned bullet points' },
-        { name: 'highlighted_skills', type: 'JSON', constraints: 'Default: []', description: 'Emphasized skills' },
-        { name: 'diff_summary', type: 'Text', constraints: 'Nullable', description: 'Summary of changes' },
-        { name: 'file_path', type: 'String(1024)', constraints: 'Nullable', description: 'Rendered output PDF path' },
-        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Generation timestamp' },
-        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
-      ],
-    },
-    applications: {
-      description: 'Tracks job application state machine from draft to submission.',
-      phase: 'Phase 5 & 6 Foundation',
-      columns: [
-        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'job_id', type: 'Integer', constraints: 'FK -> jobs.id (CASCADE)', description: 'Target job' },
-        { name: 'tailored_resume_id', type: 'Integer', constraints: 'FK -> tailored_resumes.id (SET NULL)', description: 'Attached resume variant' },
-        { name: 'status', type: 'String(50)', constraints: 'Default: draft, Indexed', description: 'draft / pending_approval / approved / submitted' },
-        { name: 'portal_type', type: 'String(100)', constraints: 'Default: generic', description: 'greenhouse / lever / workday' },
-        { name: 'portal_url', type: 'String(1024)', constraints: 'Nullable', description: 'Direct application form URL' },
-        { name: 'cover_letter', type: 'Text', constraints: 'Nullable', description: 'Tailored cover letter text' },
-        { name: 'answers_payload', type: 'JSON', constraints: 'Default: {}', description: 'Pre-filled questionnaire answers' },
-        { name: 'submission_notes', type: 'Text', constraints: 'Nullable', description: 'Log / verification notes' },
-        { name: 'error_message', type: 'Text', constraints: 'Nullable', description: 'Submission error details' },
-        { name: 'submitted_at', type: 'DateTime', constraints: 'Nullable', description: 'Timestamp when submitted' },
-        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Creation timestamp' },
-        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
-      ],
-    },
-    application_reviews: {
-      description: 'Captures human reviewer feedback, decisions, and manual overrides.',
-      phase: 'Phase 5 Foundation',
-      columns: [
-        { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'application_id', type: 'Integer', constraints: 'FK -> applications.id (CASCADE)', description: 'Target application' },
-        { name: 'decision', type: 'String(50)', constraints: 'Default: pending', description: 'pending / approved / rejected / changes_requested' },
-        { name: 'reviewer_notes', type: 'Text', constraints: 'Nullable', description: 'User comments or guidance' },
-        { name: 'manual_edits', type: 'JSON', constraints: 'Default: {}', description: 'Field-level user corrections' },
-        { name: 'reviewed_at', type: 'DateTime', constraints: 'Nullable', description: 'Decision timestamp' },
-        { name: 'created_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Creation timestamp' },
-        { name: 'updated_at', type: 'DateTime', constraints: 'NOT NULL (UTC)', description: 'Last modified timestamp' },
       ],
     },
     audit_logs: {
@@ -129,8 +137,7 @@ export const SchemaViewer: React.FC = () => {
       phase: 'Cross-Cutting',
       columns: [
         { name: 'id', type: 'Integer', constraints: 'PK, Autoincrement', description: 'Unique identifier' },
-        { name: 'application_id', type: 'Integer', constraints: 'FK -> applications.id (CASCADE)', description: 'Related application (optional)' },
-        { name: 'stage', type: 'String(50)', constraints: 'NOT NULL, Indexed', description: 'discovery / analysis / tailoring / approval / submission' },
+        { name: 'stage', type: 'String(50)', constraints: 'NOT NULL, Indexed', description: 'Pipeline stage' },
         { name: 'action', type: 'String(100)', constraints: 'NOT NULL', description: 'Action descriptor' },
         { name: 'level', type: 'String(20)', constraints: 'Default: info', description: 'info / warning / error' },
         { name: 'message', type: 'Text', constraints: 'NOT NULL', description: 'Human-readable log entry' },
@@ -140,7 +147,7 @@ export const SchemaViewer: React.FC = () => {
     },
   };
 
-  const current = schemas[selectedTable];
+  const current = schemas[selectedTable] || schemas['candidate_profiles'];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -149,7 +156,7 @@ export const SchemaViewer: React.FC = () => {
           Database Schema Explorer (SQLAlchemy + Alembic)
         </h2>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-          All 7 relational models are migrated and active in SQLite with WAL mode enabled.
+          Phase 2 models are migrated and active in SQLite WAL mode.
         </p>
       </div>
 
@@ -176,7 +183,7 @@ export const SchemaViewer: React.FC = () => {
             <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Table: <code>{selectedTable}</code></h3>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <span className="badge badge-blue">{current.phase}</span>
+            <span className="badge badge-green">{current.phase}</span>
             <span className="badge badge-purple">{current.columns.length} Columns</span>
           </div>
         </div>

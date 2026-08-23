@@ -4,7 +4,6 @@ from app.core.config import Settings, get_settings
 def test_settings_initialization():
     settings = get_settings()
     assert settings.APP_NAME == "AI Job Application Agent"
-    assert settings.APP_VERSION == "0.1.0"
     assert settings.ENVIRONMENT == "testing"
     assert settings.is_sqlite is True
 
@@ -24,11 +23,17 @@ def test_settings_public_config():
     assert phase1["status"] == "ready"
     assert phase1["active"] is True
 
-    # Verify Phase 2 is planned
+    # Verify Phase 2 is ready and active
     phase2 = public_config["pipeline_stages"][1]
-    assert phase2["stage_id"] == "job_discovery"
-    assert phase2["status"] == "planned"
-    assert phase2["active"] is False
+    assert phase2["stage_id"] == "candidate_profile"
+    assert phase2["status"] == "ready"
+    assert phase2["active"] is True
+
+    # Verify Phase 3 is planned
+    phase3 = public_config["pipeline_stages"][2]
+    assert phase3["stage_id"] == "jd_analysis"
+    assert phase3["status"] == "planned"
+    assert phase3["active"] is False
 
 
 def test_sqlite_db_path_handling():

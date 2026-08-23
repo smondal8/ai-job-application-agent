@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   LayoutDashboard,
+  UserCheck,
   GitMerge,
   Database,
   Sliders,
@@ -8,7 +9,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-export type NavTab = 'overview' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
+export type NavTab = 'overview' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -23,6 +24,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       icon: <LayoutDashboard size={18} />,
     },
     {
+      id: 'profile',
+      label: 'Candidate Profile & CV',
+      icon: <UserCheck size={18} />,
+      badge: 'Phase 2',
+    },
+    {
       id: 'pipeline',
       label: 'Pipeline Architecture',
       icon: <GitMerge size={18} />,
@@ -32,7 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'schemas',
       label: 'Database Models',
       icon: <Database size={18} />,
-      badge: '7 Tables',
+      badge: '13 Tables',
     },
     {
       id: 'config',
@@ -50,13 +57,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
     <aside className="sidebar">
       <div style={{ padding: '1.5rem 1.25rem', borderBottom: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <ShieldCheck size={20} color="#38bdf8" />
+          <ShieldCheck size={20} color="#34d399" />
           <span style={{ fontWeight: 600, fontSize: '0.875rem', letterSpacing: '0.025em' }}>
-            Phase 1 Active
+            Phase 2 Active
           </span>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-          FastAPI + SQLite + Alembic + React/TS foundational control plane.
+          Verified Candidate Profile & Master Resume Ground Truth Subsystem.
         </p>
       </div>
 
@@ -74,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
             {item.icon}
             <span style={{ flex: 1 }}>{item.label}</span>
             {item.badge && (
-              <span style={{ fontSize: '0.6875rem', padding: '0.125rem 0.375rem', borderRadius: '4px', backgroundColor: '#1e293b', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '0.6875rem', padding: '0.125rem 0.375rem', borderRadius: '4px', backgroundColor: item.badge === 'Phase 2' ? 'rgba(52, 211, 153, 0.2)' : '#1e293b', color: item.badge === 'Phase 2' ? '#34d399' : 'var(--text-secondary)' }}>
                 {item.badge}
               </span>
             )}
@@ -83,8 +90,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       </nav>
 
       <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <div>Branch: <code style={{ color: '#38bdf8' }}>feature/phase-01</code></div>
-        <div>Storage: <code style={{ color: 'var(--text-secondary)' }}>./data/storage</code></div>
+        <div>Branch: <code style={{ color: '#34d399' }}>feature/phase-02</code></div>
+        <div>Storage: <code style={{ color: 'var(--text-secondary)' }}>./data/storage/resumes</code></div>
       </div>
     </aside>
   );

@@ -5,12 +5,18 @@ from app.api.v1.config import router as config_router
 from app.api.v1.jobs import router as jobs_router
 from app.api.v1.applications import router as applications_router
 from app.api.v1.resumes import router as resumes_router
+from app.api.v1.profile import router as profile_router
+from app.api.v1.raw_resumes import router as raw_resumes_router
 
 api_v1_router = APIRouter()
 
-# Include health routes under /health and root
+# Core Phase 1 Routers
 api_v1_router.include_router(health_router)
 api_v1_router.include_router(config_router)
 api_v1_router.include_router(jobs_router)
 api_v1_router.include_router(applications_router)
 api_v1_router.include_router(resumes_router)
+
+# Phase 2 Candidate Profile & Master Resume Routers
+api_v1_router.include_router(profile_router)
+api_v1_router.include_router(raw_resumes_router)
