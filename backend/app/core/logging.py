@@ -18,14 +18,19 @@ class RequestIdFilter(logging.Filter):
 
 
 class JsonFormatter(logging.Formatter):
-    """JSON log formatter for structured log aggregators."""
+    """JSON log formatter for structured log aggregators with sensitive data redaction."""
 
     def format(self, record: logging.LogRecord) -> str:
+        from app.services.redaction.redaction_service import redaction_service
+
+        raw_msg = record.getMessage()
+        redacted_msg = redaction_service.redact_text(raw_msg)
+
         log_data: Dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redacted_msg,
             "request_id": getattr(record, "request_id", "system"),
             "module": record.module,
             "function": record.funcName,
@@ -33,17 +38,17 @@ class JsonFormatter(logging.Formatter):
         }
 
         if record.exc_info:
-            log_data["exception"] = self.formatException(record.exc_info)
+            log_data["exception"] = redaction_service.redact_text(self.formatException(record.exc_info))
 
         # Include custom extra fields if present
         if hasattr(record, "extra_data"):
-            log_data["extra"] = record.extra_data
+            log_data["extra"] = redaction_service.redact_structure(record.extra_data)
 
         return json.dumps(log_data)
 
 
 class ConsoleFormatter(logging.Formatter):
-    """Human-readable console formatter with color coding and request ID."""
+    """Human-readable console formatter with color coding, request ID, and redaction."""
 
     COLORS = {
         "DEBUG": "\033[36m",     # Cyan
@@ -55,14 +60,18 @@ class ConsoleFormatter(logging.Formatter):
     RESET = "\033[0m"
 
     def format(self, record: logging.LogRecord) -> str:
+        from app.services.redaction.redaction_service import redaction_service
+
         color = self.COLORS.get(record.levelname, self.RESET)
         req_id = getattr(record, "request_id", "system")
         ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         prefix = f"{color}[{record.levelname:<8}]{self.RESET} {ts} [{req_id}] {record.name}:{record.lineno} -"
-        message = f"{prefix} {record.getMessage()}"
+        raw_msg = record.getMessage()
+        redacted_msg = redaction_service.redact_text(raw_msg)
+        message = f"{prefix} {redacted_msg}"
 
         if record.exc_info:
-            message += "\n" + self.formatException(record.exc_info)
+            message += "\n" + redaction_service.redact_text(self.formatException(record.exc_info))
 
         return message
 

@@ -12,9 +12,10 @@ import {
   Sliders,
   AlertOctagon,
   Sparkles,
+  Activity,
 } from 'lucide-react';
 
-export type NavTab = 'overview' | 'applications' | 'tailoring' | 'analysis' | 'discovery' | 'jobs' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
+export type NavTab = 'overview' | 'observability' | 'applications' | 'tailoring' | 'analysis' | 'discovery' | 'jobs' | 'profile' | 'pipeline' | 'schemas' | 'config' | 'error-lab';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -27,6 +28,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'overview',
       label: 'System Overview',
       icon: <LayoutDashboard size={18} />,
+    },
+    {
+      id: 'observability',
+      label: 'Observability & Backups',
+      icon: <Activity size={18} />,
+      badge: 'Phase 11',
     },
     {
       id: 'applications',
@@ -68,13 +75,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'pipeline',
       label: 'Pipeline Architecture',
       icon: <GitMerge size={18} />,
-      badge: '10 Stages',
+      badge: '11 Stages',
     },
     {
       id: 'schemas',
       label: 'Database Models',
       icon: <Database size={18} />,
-      badge: '18 Tables',
+      badge: '19 Tables',
     },
     {
       id: 'config',
@@ -94,11 +101,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <Sparkles size={20} color="#34d399" />
           <span style={{ fontWeight: 600, fontSize: '0.875rem', letterSpacing: '0.025em' }}>
-            Phase 10 Active
+            Phase 11 Active
           </span>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-          Portal-Specific Adapters (Greenhouse, Lever, Ashby, Workday, Generic), Layout Resilience, and Global Submit Guards.
+          Application Hardening, Observability, Resilience, Redaction, Idempotency & Disaster Recovery.
         </p>
       </div>
 
@@ -122,8 +129,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                   padding: '0.125rem 0.375rem',
                   borderRadius: '4px',
                   backgroundColor:
-                    item.badge === 'Phase 10'
+                    item.badge === 'Phase 11'
                       ? 'rgba(52, 211, 153, 0.25)'
+                      : item.badge === 'Phase 10'
+                      ? 'rgba(56, 189, 248, 0.25)'
                       : item.badge === 'Phase 9'
                       ? 'rgba(56, 189, 248, 0.25)'
                       : item.badge === 'Phase 8'
@@ -142,8 +151,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                       ? 'rgba(52, 211, 153, 0.2)'
                       : '#1e293b',
                   color:
-                    item.badge === 'Phase 10'
+                    item.badge === 'Phase 11'
                       ? '#34d399'
+                      : item.badge === 'Phase 10'
+                      ? '#38bdf8'
                       : item.badge === 'Phase 9'
                       ? '#38bdf8'
                       : item.badge === 'Phase 8'
@@ -171,7 +182,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       </nav>
 
       <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <div>Branch: <code style={{ color: '#34d399' }}>feature/phase-10</code></div>
+        <div>Branch: <code style={{ color: '#34d399' }}>feature/phase-11</code></div>
         <div>LLM: <code style={{ color: 'var(--text-secondary)' }}>Ollama (qwen3:8b)</code></div>
       </div>
     </aside>

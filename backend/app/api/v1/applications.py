@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -164,16 +164,37 @@ def add_application_review(
 def approve_application(
     application_id: int,
     payload: ApplicationApprovalRequest = ApplicationApprovalRequest(),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> ApplicationApprovalResponse:
     """Grant cryptographically signed human approval bound to exact job, candidate, resume, and screening hashes."""
-    approval = approval_service.grant_approval(
-        db=db,
-        application_id=application_id,
-        approver_notes=payload.approver_notes,
-        approver_id=payload.approver_id,
-    )
-    return ApplicationApprovalResponse.model_validate(approval)
+    from app.services.idempotency.idempotency_service import idempotency_service
+    from app.services.observability.observability_service import observability_service
+
+    if x_idempotency_key:
+        record, is_cached = idempotency_service.process_idempotent_request(
+            db=db,
+            idempotency_key=x_idempotency_key,
+            resource_type="approval_grant",
+            request_payload={"application_id": application_id, "notes": payload.approver_notes},
+        )
+        if is_cached and record and record.response_payload:
+            return ApplicationApprovalResponse.model_validate(record.response_payload)
+
+    with observability_service.record_latency("grant_approval"):
+        approval = approval_service.grant_approval(
+            db=db,
+            application_id=application_id,
+            approver_notes=payload.approver_notes,
+            approver_id=payload.approver_id,
+        )
+        observability_service.increment("approvals_granted")
+
+    response_model = ApplicationApprovalResponse.model_validate(approval)
+    if x_idempotency_key:
+        idempotency_service.complete_idempotent_request(db, x_idempotency_key, response_model.model_dump())
+
+    return response_model
 
 
 @router.get("/{application_id}/verify-approval", response_model=ApprovalVerificationResponse, summary="Verify Approval Integrity")
@@ -193,7 +214,9 @@ def revoke_application_approval(
     db: Session = Depends(get_db),
 ) -> ApplicationApprovalResponse:
     """Explicitly revoke human approval certificate for an application."""
+    from app.services.observability.observability_service import observability_service
     approval = approval_service.revoke_approval(db=db, application_id=application_id, reason=reason)
+    observability_service.increment("approvals_revoked")
     return ApplicationApprovalResponse.model_validate(approval)
 
 
@@ -224,16 +247,37 @@ def authorize_preparation(
 async def prepare_browser_application(
     application_id: int,
     payload: PreparationRunRequest = PreparationRunRequest(),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
     db: Session = Depends(get_db),
 ) -> PreparationRunResponse:
     """Execute Playwright browser application preparation (pre-filling fields, uploading resume, stopping at submit guard)."""
-    run_record = await browser_preparation_engine.prepare_application_async(
-        db=db,
-        application_id=application_id,
-        headless=payload.headless,
-        custom_portal_url=payload.custom_portal_url,
-    )
-    return PreparationRunResponse.model_validate(run_record)
+    from app.services.idempotency.idempotency_service import idempotency_service
+    from app.services.observability.observability_service import observability_service
+
+    if x_idempotency_key:
+        record, is_cached = idempotency_service.process_idempotent_request(
+            db=db,
+            idempotency_key=x_idempotency_key,
+            resource_type="browser_preparation",
+            request_payload={"application_id": application_id, "url": payload.custom_portal_url},
+        )
+        if is_cached and record and record.response_payload:
+            return PreparationRunResponse.model_validate(record.response_payload)
+
+    with observability_service.record_latency("browser_preparation"):
+        run_record = await browser_preparation_engine.prepare_application_async(
+            db=db,
+            application_id=application_id,
+            headless=payload.headless,
+            custom_portal_url=payload.custom_portal_url,
+        )
+        observability_service.increment("browser_preparations_executed")
+
+    response_model = PreparationRunResponse.model_validate(run_record)
+    if x_idempotency_key:
+        idempotency_service.complete_idempotent_request(db, x_idempotency_key, response_model.model_dump())
+
+    return response_model
 
 
 @router.get("/{application_id}/preparation-runs", response_model=PreparationRunListResponse, summary="List Browser Preparation Runs")

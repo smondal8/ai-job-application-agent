@@ -656,4 +656,52 @@ export const api = {
     });
     return handleResponse<CandidateProfile>(res);
   },
+
+  // --- Phase 11: Hardening, Observability, Resilience & Disaster Recovery ---
+  async getSystemMetrics(): Promise<import('../types').SystemMetricsResponse> {
+    const res = await fetch(`${API_BASE}/system/metrics`);
+    return handleResponse<import('../types').SystemMetricsResponse>(res);
+  },
+
+  async recoverStaleTasks(maxAgeMinutes: number = 15): Promise<import('../types').CrashRecoveryResponse> {
+    const res = await fetch(`${API_BASE}/system/recover-stale?max_age_minutes=${maxAgeMinutes}`, {
+      method: 'POST',
+    });
+    return handleResponse<import('../types').CrashRecoveryResponse>(res);
+  },
+
+  async listBackups(): Promise<import('../types').BackupMetadata[]> {
+    const res = await fetch(`${API_BASE}/system/backups`);
+    return handleResponse<import('../types').BackupMetadata[]>(res);
+  },
+
+  async createBackup(includeArtifacts: boolean = true): Promise<import('../types').BackupMetadata> {
+    const res = await fetch(`${API_BASE}/system/backups?include_artifacts=${includeArtifacts}`, {
+      method: 'POST',
+    });
+    return handleResponse<import('../types').BackupMetadata>(res);
+  },
+
+  async verifyBackup(backupId: string): Promise<import('../types').BackupVerificationResponse> {
+    const res = await fetch(`${API_BASE}/system/backups/${backupId}/verify`, {
+      method: 'POST',
+    });
+    return handleResponse<import('../types').BackupVerificationResponse>(res);
+  },
+
+  async restoreBackup(backupId: string): Promise<import('../types').BackupRestoreResponse> {
+    const res = await fetch(`${API_BASE}/system/backups/${backupId}/restore`, {
+      method: 'POST',
+    });
+    return handleResponse<import('../types').BackupRestoreResponse>(res);
+  },
+
+  async redactSensitiveData(payload: any): Promise<any> {
+    const res = await fetch(`${API_BASE}/system/redact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
 };
