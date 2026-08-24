@@ -6,7 +6,7 @@ from sqlalchemy import desc, func
 from app.core.errors import NotFoundError, BadRequestError
 from app.core.logging import get_logger
 from app.models.application import Application
-from app.models.approval import ApplicationReview
+from app.models.approval import ApplicationReview, ApplicationApproval
 from app.models.job import Job
 from app.models.resume import TailoredResume
 from app.models.analysis import JobAnalysis
@@ -150,12 +150,20 @@ class ApplicationService:
         else:
             profile = db.query(CandidateProfile).order_by(CandidateProfile.id.asc()).first()
 
-        # Reviews
+        # Resolve Reviews
         reviews = (
             db.query(ApplicationReview)
             .filter(ApplicationReview.application_id == application_id)
             .order_by(desc(ApplicationReview.created_at))
             .all()
+        )
+
+        # Resolve Approval Record
+        latest_approval = (
+            db.query(ApplicationApproval)
+            .filter(ApplicationApproval.application_id == application_id)
+            .order_by(desc(ApplicationApproval.created_at))
+            .first()
         )
 
         return {
@@ -165,6 +173,9 @@ class ApplicationService:
                 "tailored_resume_id": app_entity.tailored_resume_id,
                 "candidate_profile_id": app_entity.candidate_profile_id,
                 "status": app_entity.status,
+                "approval_token": app_entity.approval_token,
+                "approved_at": app_entity.approved_at.isoformat() if app_entity.approved_at else None,
+                "invalidation_reason": app_entity.invalidation_reason,
                 "portal_type": app_entity.portal_type,
                 "portal_url": app_entity.portal_url,
                 "cover_letter": app_entity.cover_letter,
@@ -200,7 +211,7 @@ class ApplicationService:
                 "prompt_version": tailored_resume.prompt_version,
                 "model_used": tailored_resume.model_used,
                 "tailored_summary": tailored_resume.tailored_summary,
-                "tailored_experience": tailored_resume.tailored_experience,
+                "tailored_experience": tailored_experience_fixed if 'tailored_experience_fixed' in locals() else (tailored_resume.tailored_experience or []),
                 "highlighted_skills": tailored_resume.highlighted_skills,
                 "cover_letter": tailored_resume.cover_letter,
                 "compiled_markdown": tailored_resume.compiled_markdown or tailored_resume.markdown_content,
@@ -236,6 +247,17 @@ class ApplicationService:
                 "headline": profile.headline,
                 "is_verified": profile.is_verified,
             } if profile else None,
+            "approval": {
+                "id": latest_approval.id,
+                "status": latest_approval.status,
+                "is_valid": latest_approval.is_valid,
+                "approval_token": latest_approval.approval_token,
+                "approver_id": latest_approval.approver_id,
+                "approver_notes": latest_approval.approver_notes,
+                "invalidation_reason": latest_approval.invalidation_reason,
+                "approved_at": latest_approval.approved_at.isoformat() if latest_approval.approved_at else None,
+                "invalidated_at": latest_approval.invalidated_at.isoformat() if latest_approval.invalidated_at else None,
+            } if latest_approval else None,
             "reviews": [
                 {
                     "id": rev.id,

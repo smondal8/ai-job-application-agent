@@ -56,11 +56,73 @@ class ApplicationReviewCreate(BaseModel):
     manual_edits: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
+# --- Phase 8 Human Approval & Security Schemas ---
+
+class ApplicationApprovalRequest(BaseModel):
+    """Request payload to grant human approval bound to material input hashes."""
+    approver_notes: Optional[str] = Field(None, description="Reviewer justification or sign-off notes")
+    approver_id: str = Field("human_reviewer", description="Identifier of the approving reviewer")
+
+
+class ApplicationApprovalResponse(BaseModel):
+    """Cryptographic approval certificate record."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    application_id: int
+    status: str
+    job_id: int
+    approved_job_hash: str
+    candidate_profile_id: Optional[int] = None
+    approved_candidate_hash: str
+    tailored_resume_id: Optional[int] = None
+    approved_resume_hash: str
+    approved_answers_hash: str
+    approval_token: str
+    approver_id: str
+    approver_notes: Optional[str] = None
+    is_valid: bool
+    invalidation_reason: Optional[str] = None
+    invalidated_at: Optional[datetime] = None
+    approved_at: datetime
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApprovalVerificationResponse(BaseModel):
+    """Integrity verification response checking active approval against live input hashes."""
+    is_valid: bool
+    is_approved: bool
+    application_id: int
+    current_status: str
+    reason: Optional[str] = None
+    approval_token: Optional[str] = None
+    approved_at: Optional[str] = None
+    approved_by: Optional[str] = None
+    hashes: Optional[Dict[str, str]] = None
+    mismatches: List[str] = Field(default_factory=list)
+
+
+class PreparationAuthorizationResponse(BaseModel):
+    """Server-side security authorization certificate required before starting browser preparation."""
+    authorization_granted: bool
+    application_id: int
+    approval_token: str
+    status: str
+    authorized_at: str
+    approved_at: Optional[str] = None
+    approved_by: Optional[str] = None
+    snapshot_hashes: Optional[Dict[str, str]] = None
+
+
 class ApplicationResponse(ApplicationBase):
     """Standard application response."""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    approval_token: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    invalidation_reason: Optional[str] = None
     error_message: Optional[str] = None
     applied_at: Optional[datetime] = None
     submitted_at: Optional[datetime] = None
@@ -75,6 +137,9 @@ class ApplicationItemResponse(BaseModel):
     tailored_resume_id: Optional[int] = None
     candidate_profile_id: Optional[int] = None
     status: str
+    approval_token: Optional[str] = None
+    approved_at: Optional[str] = None
+    invalidation_reason: Optional[str] = None
     portal_type: str
     portal_url: Optional[str] = None
     cover_letter: Optional[str] = None
@@ -116,13 +181,14 @@ class ApplicationReviewResponse(BaseModel):
 
 
 class ApplicationDossierResponse(BaseModel):
-    """Complete application dossier aggregating Job, Tailored Resume, Analysis, and Reviews."""
+    """Complete application dossier aggregating Job, Tailored Resume, Analysis, Candidate, Approvals, and Reviews."""
     application: Dict[str, Any]
     job: Dict[str, Any]
     tailored_resume: Optional[Dict[str, Any]] = None
     available_resumes: List[Dict[str, Any]] = Field(default_factory=list)
     analysis: Optional[Dict[str, Any]] = None
     candidate: Optional[Dict[str, Any]] = None
+    approval: Optional[Dict[str, Any]] = None
     reviews: List[Dict[str, Any]] = Field(default_factory=list)
 
 

@@ -76,6 +76,59 @@ export interface APIErrorResponse {
   };
 }
 
+// --- Phase 8: Human Approval Security & State Machine Types ---
+
+export interface ApplicationApproval {
+  id: number;
+  application_id: number;
+  status: string;
+  job_id: number;
+  approved_job_hash: string;
+  candidate_profile_id?: number | null;
+  approved_candidate_hash: string;
+  tailored_resume_id?: number | null;
+  approved_resume_hash: string;
+  approved_answers_hash: string;
+  approval_token: string;
+  approver_id: string;
+  approver_notes?: string | null;
+  is_valid: boolean;
+  invalidation_reason?: string | null;
+  invalidated_at?: string | null;
+  approved_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApprovalVerificationResponse {
+  is_valid: boolean;
+  is_approved: boolean;
+  application_id: number;
+  current_status: string;
+  reason?: string | null;
+  approval_token?: string | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  hashes?: {
+    job_hash: string;
+    candidate_hash: string;
+    resume_hash: string;
+    answers_hash: string;
+  } | null;
+  mismatches: string[];
+}
+
+export interface PreparationAuthorizationResponse {
+  authorization_granted: boolean;
+  application_id: number;
+  approval_token: string;
+  status: string;
+  authorized_at: string;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  snapshot_hashes?: Record<string, string> | null;
+}
+
 // --- Phase 7: Central Application Dashboard & Review Types ---
 
 export interface ApplicationReview {
@@ -93,6 +146,9 @@ export interface ApplicationItem {
   tailored_resume_id?: number | null;
   candidate_profile_id?: number | null;
   status: string;
+  approval_token?: string | null;
+  approved_at?: string | null;
+  invalidation_reason?: string | null;
   portal_type: string;
   portal_url?: string | null;
   cover_letter?: string | null;
@@ -153,6 +209,9 @@ export interface ApplicationDossier {
     tailored_resume_id?: number | null;
     candidate_profile_id?: number | null;
     status: string;
+    approval_token?: string | null;
+    approved_at?: string | null;
+    invalidation_reason?: string | null;
     portal_type: string;
     portal_url?: string | null;
     cover_letter?: string | null;
@@ -185,6 +244,7 @@ export interface ApplicationDossier {
     headline?: string | null;
     is_verified: boolean;
   } | null;
+  approval?: ApplicationApproval | null;
   reviews: ApplicationReview[];
 }
 

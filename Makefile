@@ -27,6 +27,9 @@ smoke-test-phase6:
 smoke-test-phase7:
 	./scripts/smoke-test-phase7.sh
 
+smoke-test-phase8:
+	./scripts/smoke-test-phase8.sh
+
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete

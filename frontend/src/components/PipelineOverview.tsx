@@ -195,19 +195,46 @@ interface ApplicationDossierResponse {
 }`,
     },
     approval_and_submission: {
-      title: 'Human Approval State Machine & Portal Preparation',
-      phase: 'Phase 8 (Planned)',
-      icon: <Globe size={24} color="#94a3b8" />,
+      title: 'Human Approval Security Boundary & State Machine',
+      phase: 'Phase 8 (Active)',
+      icon: <Globe size={24} color="#34d399" />,
+      status: 'active',
+      description:
+        'Cryptographic human approval gate bound to immutable hashes of JD, candidate profile facts, tailored resume, and screening answers. Automatic invalidation on material changes.',
+      inputs: ['Reviewed Application Dossier', 'Live Hashes (Job, Profile, Resume, Answers)', 'Human Reviewer Authorization'],
+      outputs: ['ApplicationApproval Certificate', 'Approval Token', 'Preparation Authorization Certificate', 'AuditLog record'],
+      tables: ['applications', 'application_approvals', 'application_reviews', 'audit_logs'],
+      contract: `// Phase 8 Human Approval Security Contract
+interface ApprovalVerificationResponse {
+  is_valid: boolean;
+  is_approved: boolean;
+  application_id: number;
+  current_status: string;
+  approval_token?: string | null;
+  hashes?: {
+    job_hash: string;
+    candidate_hash: string;
+    resume_hash: string;
+    answers_hash: string;
+  };
+  mismatches: string[];
+}`,
+    },
+    browser_automation_staging: {
+      title: 'Portal Field Mapping & Assisted Browser Staging',
+      phase: 'Phase 9 (Planned)',
+      icon: <Layers size={24} color="#94a3b8" />,
       status: 'planned',
       description:
-        'Strict approval state machine transitions, portal field mapping, and safe browser automation for final application submission.',
-      inputs: ['Reviewed Application Dossier', 'Human Approval Confirmation'],
-      outputs: ['Application Status: submitted', 'Portal Confirmation Receipt', 'AuditLog record'],
-      tables: ['applications', 'application_reviews', 'audit_logs'],
-      contract: `interface ApprovalStateMachineContract {
+        'Assisted browser automation staging, field mapping to portal DOM schemas, and supervised human-in-the-loop portal submission.',
+      inputs: ['Authorized Application Preparation Token', 'Portal DOM Metadata'],
+      outputs: ['Pre-filled Application Form', 'Portal Submission Receipt'],
+      tables: ['applications', 'browser_staging_runs', 'audit_logs'],
+      contract: `interface BrowserStagingContract {
   application_id: number;
-  approval_status: 'approved' | 'rejected';
-  submission_status: 'staged' | 'submitted' | 'failed';
+  preparation_token: string;
+  portal_adapter: string;
+  staging_status: 'ready' | 'prefilled' | 'submitted';
 }`,
     },
   };
