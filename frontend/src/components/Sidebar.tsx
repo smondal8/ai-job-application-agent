@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'pipeline',
       label: 'Pipeline Architecture',
       icon: <GitMerge size={18} />,
-      badge: '11 Stages',
+      badge: '12 Stages',
     },
     {
       id: 'schemas',
@@ -101,11 +101,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <Sparkles size={20} color="#34d399" />
           <span style={{ fontWeight: 600, fontSize: '0.875rem', letterSpacing: '0.025em' }}>
-            Phase 11 Active
+            Phase 12 Complete (v1.0.0)
           </span>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-          Application Hardening, Observability, Resilience, Redaction, Idempotency & Disaster Recovery.
+          Full System Stabilization, End-to-End Test Verification, Negative Security Guarantees & Production Runbooks.
         </p>
       </div>
 
@@ -129,8 +129,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                   padding: '0.125rem 0.375rem',
                   borderRadius: '4px',
                   backgroundColor:
-                    item.badge === 'Phase 11'
+                    item.badge === 'Phase 12'
                       ? 'rgba(52, 211, 153, 0.25)'
+                      : item.badge === 'Phase 11'
+                      ? 'rgba(56, 189, 248, 0.25)'
                       : item.badge === 'Phase 10'
                       ? 'rgba(56, 189, 248, 0.25)'
                       : item.badge === 'Phase 9'
@@ -151,8 +153,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                       ? 'rgba(52, 211, 153, 0.2)'
                       : '#1e293b',
                   color:
-                    item.badge === 'Phase 11'
+                    item.badge === 'Phase 12'
                       ? '#34d399'
+                      : item.badge === 'Phase 11'
+                      ? '#38bdf8'
                       : item.badge === 'Phase 10'
                       ? '#38bdf8'
                       : item.badge === 'Phase 9'
@@ -182,7 +186,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       </nav>
 
       <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <div>Branch: <code style={{ color: '#34d399' }}>feature/phase-11</code></div>
+        <div>Branch: <code style={{ color: '#34d399' }}>feature/phase-12</code></div>
         <div>LLM: <code style={{ color: 'var(--text-secondary)' }}>Ollama (qwen3:8b)</code></div>
       </div>
     </aside>
