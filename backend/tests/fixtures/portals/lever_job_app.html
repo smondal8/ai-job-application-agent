@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lever Job Application Demo</title>
+</head>
+<body>
+  <div class="application-page">
+    <h2>Principal Compiler Architect</h2>
+    <form id="lever-form" action="/apply" method="POST">
+      <label>Full Name</label>
+      <input type="text" name="name" placeholder="Full Name" required>
+
+      <label>Email</label>
+      <input type="email" name="email" placeholder="Email Address" required>
+
+      <label>Phone</label>
+      <input type="tel" name="phone" placeholder="Phone Number">
+
+      <label>Current Company / Organization</label>
+      <input type="text" name="org" placeholder="Current Company">
+
+      <label>LinkedIn URL</label>
+      <input type="text" name="urls[LinkedIn]" placeholder="LinkedIn URL">
+
+      <label>GitHub URL</label>
+      <input type="text" name="urls[GitHub]" placeholder="GitHub URL">
+
+      <label>Resume</label>
+      <input type="file" name="resume">
+
+      <label>Additional Information</label>
+      <textarea name="comments" placeholder="Cover letter or extra notes..."></textarea>
+
+      <button type="submit" class="template-btn-submit">Submit application</button>
+    </form>
+  </div>
+</body>
+</html>

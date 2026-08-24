@@ -23,6 +23,8 @@ import {
   Play,
   Key,
   RefreshCw,
+  Globe,
+  Camera,
 } from 'lucide-react';
 import { api } from '../services/api';
 import {
@@ -31,6 +33,7 @@ import {
   ApplicationStats,
   ApprovalVerificationResponse,
   PreparationAuthorizationResponse,
+  BrowserPreparationRun,
   Job,
 } from '../types';
 
@@ -56,7 +59,7 @@ export const ApplicationDashboardView: React.FC = () => {
   const [isCreating, setIsCreating] = useState<boolean>(false);
 
   // Dossier Active Tab
-  const [dossierTab, setDossierTab] = useState<'job' | 'resume' | 'screening' | 'approval' | 'review'>('approval');
+  const [dossierTab, setDossierTab] = useState<'approval' | 'staging' | 'job' | 'resume' | 'screening' | 'review'>('staging');
   const [docFormat, setDocFormat] = useState<'markdown' | 'cover_letter' | 'text' | 'html' | 'traceability'>('markdown');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -68,6 +71,12 @@ export const ApplicationDashboardView: React.FC = () => {
   const [isAuthorizingPrep, setIsAuthorizingPrep] = useState<boolean>(false);
   const [prepAuthResult, setPrepAuthResult] = useState<PreparationAuthorizationResponse | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Phase 9 Playwright Browser Staging State
+  const [latestPrepRun, setLatestPrepRun] = useState<BrowserPreparationRun | null>(null);
+  const [isRunningStaging, setIsRunningStaging] = useState<boolean>(false);
+  const [customPortalUrl, setCustomPortalUrl] = useState<string>('');
+  const [stagingError, setStagingError] = useState<string | null>(null);
 
   // Review Form in Dossier
   const [reviewNoteInput, setReviewNoteInput] = useState<string>('');
@@ -121,9 +130,15 @@ export const ApplicationDashboardView: React.FC = () => {
     setLoadingDossier(true);
     setPrepAuthResult(null);
     setAuthError(null);
+    setStagingError(null);
     try {
-      const data = await api.getApplicationDossier(appId);
+      const [data, latestRun] = await Promise.all([
+        api.getApplicationDossier(appId),
+        api.getLatestPreparationRun(appId).catch(() => null),
+      ]);
       setDossier(data);
+      setLatestPrepRun(latestRun);
+      setCustomPortalUrl(data.application.portal_url || data.job.url || '');
       setAnswersPayloadJson(JSON.stringify(data.application.answers_payload || {}, null, 2));
       setReviewNoteInput(data.application.reviewer_notes || '');
       setApproverNotesInput(data.application.reviewer_notes || '');
@@ -185,6 +200,25 @@ export const ApplicationDashboardView: React.FC = () => {
       alert(`Approval error: ${err.message}`);
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const handleRunPreparation = async () => {
+    if (!dossier) return;
+    setIsRunningStaging(true);
+    setStagingError(null);
+    try {
+      const run = await api.prepareApplication(dossier.application.id, {
+        custom_portal_url: customPortalUrl || undefined,
+        headless: true,
+      });
+      setLatestPrepRun(run);
+      await loadDossier(dossier.application.id);
+      await fetchApplicationsAndStats();
+    } catch (err: any) {
+      setStagingError(err.message || 'Browser preparation failed.');
+    } finally {
+      setIsRunningStaging(false);
     }
   };
 
@@ -290,7 +324,7 @@ export const ApplicationDashboardView: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Top Banner: Phase 8 Subsystem */}
+      {/* Top Banner: Phase 9 Subsystem */}
       <div
         className="card"
         style={{
@@ -304,14 +338,14 @@ export const ApplicationDashboardView: React.FC = () => {
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Lock size={24} color="#38bdf8" />
+            <Globe size={24} color="#38bdf8" />
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-              Human Approval Security Boundary & State Machine
+              Playwright Browser Application-Preparation Engine
             </h2>
-            <span className="badge badge-blue">Phase 8 Active</span>
+            <span className="badge badge-blue">Phase 9 Active</span>
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            Human approval is a cryptographic security boundary bound to immutable input hashes (job, candidate facts, tailored resume, screening answers).
+            Automated form pre-filling, approved resume document uploads, visual screenshot audit, and strict final-submit safety guards.
           </p>
         </div>
 
@@ -342,6 +376,18 @@ export const ApplicationDashboardView: React.FC = () => {
 
           <div className="card">
             <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+              Staged for Review
+            </div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.25rem' }}>
+              {stats.status_counts.approved_pending_submission || 0}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+              Pre-filled via Playwright
+            </div>
+          </div>
+
+          <div className="card">
+            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
               Human Approved
             </div>
             <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#34d399', marginTop: '0.25rem' }}>
@@ -349,18 +395,6 @@ export const ApplicationDashboardView: React.FC = () => {
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
               Cryptographically signed
-            </div>
-          </div>
-
-          <div className="card">
-            <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-              Ready for Review
-            </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#38bdf8', marginTop: '0.25rem' }}>
-              {stats.status_counts.ready_for_review || 0}
-            </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-              Awaiting human sign-off
             </div>
           </div>
 
@@ -381,7 +415,6 @@ export const ApplicationDashboardView: React.FC = () => {
       {/* Filter and Search Bar */}
       <div className="card" style={{ padding: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-          {/* Status Tabs */}
           <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
             {['all', 'approved', 'ready_for_review', 'in_review', 'staged_for_preparation', 'requires_reapproval', 'draft', 'rejected'].map((st) => (
               <button
@@ -395,7 +428,6 @@ export const ApplicationDashboardView: React.FC = () => {
             ))}
           </div>
 
-          {/* Search & Portal Filter */}
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', background: '#090d16', padding: '0.3rem 0.6rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
               <Search size={14} color="var(--text-muted)" />
@@ -543,7 +575,7 @@ export const ApplicationDashboardView: React.FC = () => {
                             style={{ fontSize: '0.6875rem', padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                           >
                             <Eye size={12} />
-                            <span>Security Dossier</span>
+                            <span>Staging</span>
                           </button>
                         </td>
                       </tr>
@@ -560,7 +592,7 @@ export const ApplicationDashboardView: React.FC = () => {
           <div className="card" style={{ borderTop: '4px solid #38bdf8', padding: '1.25rem', position: 'sticky', top: '1rem' }}>
             {loadingDossier ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                Loading Application Dossier & Verifying Hashes...
+                Loading Application Dossier & Staging Status...
               </div>
             ) : dossier ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -592,6 +624,14 @@ export const ApplicationDashboardView: React.FC = () => {
 
                 {/* Dossier Sub-Tabs */}
                 <div style={{ display: 'flex', gap: '0.375rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => setDossierTab('staging')}
+                    className={`btn ${dossierTab === 'staging' ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    <Globe size={12} />
+                    <span>Browser Staging (Phase 9)</span>
+                  </button>
                   <button
                     onClick={() => setDossierTab('approval')}
                     className={`btn ${dossierTab === 'approval' ? 'btn-primary' : 'btn-secondary'}`}
@@ -634,10 +674,144 @@ export const ApplicationDashboardView: React.FC = () => {
                   </button>
                 </div>
 
-                {/* TAB 1: PHASE 8 APPROVAL & SECURITY GATE CENTER */}
+                {/* TAB 1: PHASE 9 PLAYWRIGHT BROWSER STAGING ENGINE */}
+                {dossierTab === 'staging' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {/* Non-Negotiable Safety Checklist Callout */}
+                    <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                        <ShieldCheck size={14} color="#34d399" />
+                        <span>Non-Negotiable Browser Safety Guarantees</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.6875rem' }}>
+                        <div style={{ background: 'rgba(52, 211, 153, 0.08)', padding: '0.4rem', borderRadius: '4px', border: '1px solid rgba(52, 211, 153, 0.2)', color: '#34d399' }}>
+                          ✓ Final Submit Guard: ACTIVE (Never Submitted)
+                        </div>
+                        <div style={{ background: 'rgba(56, 189, 248, 0.08)', padding: '0.4rem', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.2)', color: '#38bdf8' }}>
+                          ✓ Server Authorization: Required Prior to Run
+                        </div>
+                        <div style={{ background: 'rgba(251, 191, 36, 0.08)', padding: '0.4rem', borderRadius: '4px', border: '1px solid rgba(251, 191, 36, 0.2)', color: '#fbbf24' }}>
+                          ✓ CAPTCHA / Bot Defense: Safe Human Pause
+                        </div>
+                        <div style={{ background: 'rgba(192, 132, 252, 0.08)', padding: '0.4rem', borderRadius: '4px', border: '1px solid rgba(192, 132, 252, 0.2)', color: '#c084fc' }}>
+                          ✓ Prompt Injection Filter: Policy Enforced
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Staging Execution Controls */}
+                    <div style={{ background: '#090d16', padding: '0.875rem', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        Target Portal URL (or Local Fixture):
+                      </label>
+                      <input
+                        type="text"
+                        value={customPortalUrl}
+                        onChange={(e) => setCustomPortalUrl(e.target.value)}
+                        placeholder="https://boards.greenhouse.io/... or file:///..."
+                        style={{
+                          width: '100%',
+                          background: '#131b2e',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '4px',
+                          color: '#f8fafc',
+                          fontSize: '0.75rem',
+                          padding: '0.5rem',
+                        }}
+                      />
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                          Status: <span className="badge badge-blue">{dossier.application.status.toUpperCase()}</span>
+                        </div>
+
+                        <button
+                          onClick={handleRunPreparation}
+                          disabled={isRunningStaging || !approvalVerification?.is_valid}
+                          className="btn btn-primary"
+                          style={{
+                            fontSize: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            opacity: approvalVerification?.is_valid ? 1 : 0.6,
+                          }}
+                        >
+                          <Play size={13} />
+                          <span>{isRunningStaging ? 'Executing Playwright...' : 'Execute Browser Preparation'}</span>
+                        </button>
+                      </div>
+
+                      {stagingError && (
+                        <div style={{ background: 'rgba(239, 68, 68, 0.15)', padding: '0.625rem', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#fca5a5', fontSize: '0.75rem' }}>
+                          <strong>Execution Block:</strong> {stagingError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Latest Preparation Run Details */}
+                    {latestPrepRun && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                            Latest Staging Run (#{latestPrepRun.id})
+                          </span>
+                          <span className={`badge ${latestPrepRun.status === 'staged' ? 'badge-green' : latestPrepRun.status === 'paused_for_human_input' ? 'badge-purple' : 'badge-blue'}`}>
+                            {latestPrepRun.status.toUpperCase()}
+                          </span>
+                        </div>
+
+                        {/* Fields Filled Table */}
+                        <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                          <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.375rem' }}>
+                            Pre-Filled Form Fields ({latestPrepRun.fields_filled.length}):
+                          </div>
+                          <div style={{ maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            {latestPrepRun.fields_filled.map((f, fi) => (
+                              <div key={fi} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', background: '#131b2e', padding: '0.3rem 0.5rem', borderRadius: '4px' }}>
+                                <strong style={{ color: '#38bdf8' }}>{f.field}</strong>
+                                <span style={{ color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {String(f.value)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Unresolved Fields Alert if any */}
+                        {latestPrepRun.unresolved_fields.length > 0 && (
+                          <div style={{ background: 'rgba(251, 191, 36, 0.12)', padding: '0.75rem', borderRadius: '6px', border: '1px solid rgba(251, 191, 36, 0.3)' }}>
+                            <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                              Unresolved Fields (Action Required):
+                            </div>
+                            <ul style={{ listStylePosition: 'inside', fontSize: '0.6875rem', color: '#f8fafc' }}>
+                              {latestPrepRun.unresolved_fields.map((u, ui) => (
+                                <li key={ui}>{u.field}: {u.reason || 'Missing answer'}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Visual Screenshot Audit Preview */}
+                        {latestPrepRun.screenshot_path && (
+                          <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.6875rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.375rem' }}>
+                              <Camera size={13} />
+                              <span>Staged Form Screenshot Audit</span>
+                            </div>
+                            <div style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                              File: {latestPrepRun.screenshot_path}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: PHASE 8 APPROVAL & SECURITY GATE CENTER */}
                 {dossierTab === 'approval' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {/* Live Verification Status Card */}
                     <div
                       style={{
                         padding: '1rem',
@@ -705,7 +879,6 @@ export const ApplicationDashboardView: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Cryptographic Snapshot Hashes Inspector */}
                     <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
                       <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                         <Key size={12} />
@@ -743,7 +916,6 @@ export const ApplicationDashboardView: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Human Approval Grant & State Machine Actions */}
                     <div style={{ background: '#090d16', padding: '0.875rem', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                       <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                         Approver Justification & Sign-off Notes:
@@ -814,7 +986,6 @@ export const ApplicationDashboardView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Error or Authorization Certificate Output */}
                       {authError && (
                         <div style={{ background: 'rgba(239, 68, 68, 0.15)', padding: '0.625rem', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#fca5a5', fontSize: '0.75rem' }}>
                           <strong>Security Block:</strong> {authError}
@@ -834,7 +1005,7 @@ export const ApplicationDashboardView: React.FC = () => {
                   </div>
                 )}
 
-                {/* TAB 2: Job Details & Portal Context */}
+                {/* TAB 3: Job Details & Portal Context */}
                 {dossierTab === 'job' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div className="grid-3" style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
@@ -900,7 +1071,7 @@ export const ApplicationDashboardView: React.FC = () => {
                   </div>
                 )}
 
-                {/* TAB 3: Tailored Materials & Fact Attribution */}
+                {/* TAB 4: Tailored Materials & Fact Attribution */}
                 {dossierTab === 'resume' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {dossier.available_resumes.length > 0 && (
@@ -1011,7 +1182,7 @@ export const ApplicationDashboardView: React.FC = () => {
                   </div>
                 )}
 
-                {/* TAB 4: Screening Questions Q&A */}
+                {/* TAB 5: Screening Questions Q&A */}
                 {dossierTab === 'screening' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
@@ -1044,7 +1215,7 @@ export const ApplicationDashboardView: React.FC = () => {
                   </div>
                 )}
 
-                {/* TAB 5: Review Ledger */}
+                {/* TAB 6: Review Ledger */}
                 {dossierTab === 'review' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

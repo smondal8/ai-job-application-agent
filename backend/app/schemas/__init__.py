@@ -86,6 +86,11 @@ from app.schemas.tailoring import (
     TailoredResumeResponse,
     TailoredResumeListResponse,
 )
+from app.schemas.preparation import (
+    PreparationRunRequest,
+    PreparationRunResponse,
+    PreparationRunListResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -161,4 +166,7 @@ __all__ = [
     "TailoredResumeApprovalRequest",
     "TailoredResumeResponse",
     "TailoredResumeListResponse",
+    "PreparationRunRequest",
+    "PreparationRunResponse",
+    "PreparationRunListResponse",
 ]

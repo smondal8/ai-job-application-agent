@@ -17,6 +17,7 @@ dependencies = [
     "pydantic-settings>=2.2.1",
     "python-dotenv>=1.0.1",
     "python-multipart>=0.0.9",
+    "playwright>=1.40.0",
 ]
 
 [project.optional-dependencies]

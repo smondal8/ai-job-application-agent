@@ -1,0 +1,217 @@
+import asyncio
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, Optional
+from datetime import datetime, timezone
+from sqlalchemy.orm import Session
+
+from app.core.config import get_settings
+from app.core.errors import NotFoundError, BadRequestError, ForbiddenError, AppException
+from app.core.logging import get_logger
+from app.models.application import Application
+from app.models.approval import ApplicationApproval
+from app.models.preparation import BrowserPreparationRun
+from app.models.audit import AuditLog
+from app.services.approval import approval_service, ApplicationStatus
+from app.services.preparation.adapter_base import PreparationContext, PreparationResult
+from app.services.preparation.adapter_registry import preparation_adapter_registry
+from app.services.preparation.safety_guard import PlaywrightSafetyGuard
+
+logger = get_logger("app.services.preparation.engine")
+
+
+class BrowserPreparationEngine:
+    """Core Playwright browser application preparation engine (Phase 9)."""
+
+    def __init__(self):
+        self.settings = get_settings()
+
+    async def prepare_application_async(
+        self,
+        db: Session,
+        application_id: int,
+        headless: bool = True,
+        custom_portal_url: Optional[str] = None,
+    ) -> BrowserPreparationRun:
+        """Asynchronously executes Playwright browser application staging."""
+        # 1. NON-NEGOTIABLE SERVER-SIDE AUTHORIZATION GATE CHECK
+        logger.info(f"Checking server-side approval authorization for application #{application_id}...")
+        auth_res = approval_service.authorize_for_preparation(db=db, application_id=application_id)
+        approval_token = auth_res["approval_token"]
+
+        application = db.query(Application).filter(Application.id == application_id).first()
+        if not application:
+            raise NotFoundError(f"Application #{application_id} not found.")
+
+        job = application.job
+        if not job:
+            raise NotFoundError(f"Job not found for application #{application_id}.")
+
+        candidate = application.candidate_profile
+        if not candidate:
+            raise BadRequestError("Candidate profile not linked to application.")
+
+        tailored_resume = application.tailored_resume
+        approval = (
+            db.query(ApplicationApproval)
+            .filter(ApplicationApproval.application_id == application_id, ApplicationApproval.is_valid == True)
+            .order_by(ApplicationApproval.created_at.desc())
+            .first()
+        )
+
+        # 2. Resolve target URL
+        portal_url = custom_portal_url or application.portal_url or job.url
+        if not portal_url:
+            raise BadRequestError("No target portal URL configured for this job application.")
+
+        # 3. Create approved resume upload file if available
+        temp_resume_file: Optional[Path] = None
+        if tailored_resume:
+            resume_content = (
+                tailored_resume.compiled_markdown
+                or tailored_resume.compiled_text
+                or tailored_resume.cover_letter
+                or f"# {candidate.full_name}\n\nCandidate Resume"
+            )
+            resumes_dir = Path(self.settings.STORAGE_DIR) / "staged_resumes"
+            resumes_dir.mkdir(parents=True, exist_ok=True)
+            temp_resume_file = resumes_dir / f"approved_resume_app_{application_id}.txt"
+            temp_resume_file.write_text(resume_content, encoding="utf-8")
+
+        screenshot_dir = Path(self.settings.STORAGE_DIR) / "screenshots" / f"app_{application_id}"
+        screenshot_dir.mkdir(parents=True, exist_ok=True)
+
+        context = PreparationContext(
+            application_id=application.id,
+            job=job,
+            candidate=candidate,
+            tailored_resume=tailored_resume,
+            answers_payload=application.answers_payload or {},
+            approval_token=approval_token,
+            portal_url=portal_url,
+            screenshot_dir=screenshot_dir,
+            resume_file_path=temp_resume_file,
+        )
+
+        adapter = preparation_adapter_registry.get_adapter(application.portal_type, portal_url)
+        logger.info(f"Using preparation adapter '{adapter.portal_name}' for portal URL: {portal_url}")
+
+        # 4. Launch isolated Playwright session
+        from playwright.async_api import async_playwright
+
+        prep_result: Optional[PreparationResult] = None
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=headless,
+                args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+            )
+            browser_context = await browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            )
+            page = await browser_context.new_page()
+
+            try:
+                prep_result = await adapter.prepare(page, context)
+            finally:
+                await browser_context.close()
+                await browser.close()
+
+        # 5. Non-Negotiable Safety Verification
+        if prep_result.final_submit_clicked:
+            raise AppException("CRITICAL SAFETY VIOLATION: Submit button was clicked during preparation!")
+
+        # 6. Persist Preparation Run Audit Record
+        run_record = BrowserPreparationRun(
+            application_id=application.id,
+            job_id=job.id,
+            approval_id=approval.id if approval else None,
+            approval_token=approval_token,
+            portal_type=adapter.portal_name,
+            portal_url=portal_url,
+            status=prep_result.status,
+            fields_filled=prep_result.fields_filled,
+            unresolved_fields=prep_result.unresolved_fields,
+            resume_uploaded=prep_result.resume_uploaded,
+            resume_file_path=prep_result.resume_file_path,
+            screenshot_path=prep_result.screenshot_path,
+            final_submit_clicked=False,
+            guard_triggered=prep_result.guard_triggered,
+            captcha_detected=prep_result.captcha_detected,
+            auth_required=prep_result.auth_required,
+            error_message=prep_result.error_message,
+            duration_ms=prep_result.duration_ms,
+        )
+        db.add(run_record)
+        db.commit()
+        db.refresh(run_record)
+
+        # 7. Audit Log
+        audit = AuditLog(
+            application_id=application.id,
+            stage="browser_automation_staging",
+            action="APPLICATION_BROWSER_STAGED",
+            message=(
+                f"Browser application staged for App #{application.id} via adapter '{adapter.portal_name}'. "
+                f"Status: {prep_result.status}. Fields filled: {len(prep_result.fields_filled)}. Submit guard active."
+            ),
+            payload={
+                "run_id": run_record.id,
+                "portal_type": adapter.portal_name,
+                "status": prep_result.status,
+                "fields_filled_count": len(prep_result.fields_filled),
+                "unresolved_count": len(prep_result.unresolved_fields),
+                "guard_triggered": prep_result.guard_triggered,
+                "screenshot_path": prep_result.screenshot_path,
+            },
+        )
+        db.add(audit)
+        db.commit()
+        db.refresh(run_record)
+
+        return run_record
+
+    def prepare_application(
+        self,
+        db: Session,
+        application_id: int,
+        headless: bool = True,
+        custom_portal_url: Optional[str] = None,
+    ) -> BrowserPreparationRun:
+        """Synchronous wrapper for browser application preparation."""
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # In async contexts, run in a separate thread/loop
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    return pool.submit(
+                        asyncio.run,
+                        self.prepare_application_async(
+                            db=db,
+                            application_id=application_id,
+                            headless=headless,
+                            custom_portal_url=custom_portal_url,
+                        ),
+                    ).result()
+            else:
+                return loop.run_until_complete(
+                    self.prepare_application_async(
+                        db=db,
+                        application_id=application_id,
+                        headless=headless,
+                        custom_portal_url=custom_portal_url,
+                    )
+                )
+        except RuntimeError:
+            return asyncio.run(
+                self.prepare_application_async(
+                    db=db,
+                    application_id=application_id,
+                    headless=headless,
+                    custom_portal_url=custom_portal_url,
+                )
+            )
+
+
+browser_preparation_engine = BrowserPreparationEngine()
