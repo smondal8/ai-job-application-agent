@@ -16,6 +16,7 @@ from app.services.tailoring import (
     ResumeDocumentCompiler,
     AtomicFactRegistry,
 )
+from app.services.application_service import application_service, ApplicationService
 
 __all__ = [
     "storage_service",
@@ -43,4 +44,6 @@ __all__ = [
     "resume_document_compiler",
     "ResumeDocumentCompiler",
     "AtomicFactRegistry",
+    "application_service",
+    "ApplicationService",
 ]

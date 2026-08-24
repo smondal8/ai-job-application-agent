@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Header } from './components/Header';
 import { Sidebar, NavTab } from './components/Sidebar';
 import { HealthStatusCard } from './components/HealthStatusCard';
+import { ApplicationDashboardView } from './components/ApplicationDashboardView';
 import { ResumeTailoringStudioView } from './components/ResumeTailoringStudioView';
 import { JDAnalysisView } from './components/JDAnalysisView';
 import { JobDiscoveryView } from './components/JobDiscoveryView';
@@ -72,6 +73,23 @@ export const App: React.FC = () => {
 
               {/* Highlights Grid */}
               <div className="grid-4">
+                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('applications')}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8' }}>
+                      <Briefcase size={18} />
+                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Applications Dashboard</h4>
+                    </div>
+                    <span className="badge badge-blue">Phase 7 Active</span>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Centralized application tracking, comprehensive dossier reviews, and tailored resume version linking.
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#38bdf8', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
+                    <span>Open Dashboard</span>
+                    <ArrowRight size={12} />
+                  </div>
+                </div>
+
                 <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('tailoring')}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399' }}>
@@ -122,27 +140,11 @@ export const App: React.FC = () => {
                     <ArrowRight size={12} />
                   </div>
                 </div>
-
-                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('jobs')}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399' }}>
-                      <Briefcase size={18} />
-                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Job DB & Ingestion</h4>
-                    </div>
-                    <span className="badge badge-green">Phase 3 Active</span>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    Normalized job catalog, JSON/CSV ingestion fixtures, and deterministic conservative deduplication.
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#34d399', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
-                    <span>Open Job Catalog</span>
-                    <ArrowRight size={12} />
-                  </div>
-                </div>
               </div>
             </div>
           )}
 
+          {activeTab === 'applications' && <ApplicationDashboardView />}
           {activeTab === 'tailoring' && <ResumeTailoringStudioView />}
           {activeTab === 'analysis' && <JDAnalysisView />}
           {activeTab === 'discovery' && <JobDiscoveryView />}

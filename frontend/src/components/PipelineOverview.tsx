@@ -173,19 +173,41 @@ interface TailoredResumeResponse {
   traceability_matrix: Record<string, string[]>;
 }`,
     },
-    browser_preparation: {
-      title: 'Human Approval & Browser Submission',
-      phase: 'Phase 7 (Planned)',
+    application_dashboard: {
+      title: 'Central Application Dashboard & Review Workflow',
+      phase: 'Phase 7 (Active)',
+      icon: <Briefcase size={24} color="#38bdf8" />,
+      status: 'active',
+      description:
+        'Unified application management, multi-entity dossier read/review workflows, and job & tailored resume version linking with full traceability.',
+      inputs: ['Job Listings', 'Tailored Resumes (Phase 6)', 'Screening Answers', 'Review Notes'],
+      outputs: ['Application Dossier', 'Review Ledger Entries', 'Audit Trails'],
+      tables: ['applications', 'application_reviews', 'jobs', 'tailored_resumes', 'audit_logs'],
+      contract: `// Phase 7 Application Dossier Contract
+interface ApplicationDossierResponse {
+  application: ApplicationResponse;
+  job: JobResponse;
+  tailored_resume: TailoredResumeResponse;
+  available_resumes: Array<{ id: number; prompt_version: string; validation_status: string }>;
+  analysis: JobAnalysisResponse;
+  candidate: CandidateProfileResponse;
+  reviews: ApplicationReviewResponse[];
+}`,
+    },
+    approval_and_submission: {
+      title: 'Human Approval State Machine & Portal Preparation',
+      phase: 'Phase 8 (Planned)',
       icon: <Globe size={24} color="#94a3b8" />,
       status: 'planned',
       description:
-        'Application approval queue and assisted portal navigation with final human confirmation gate before submission.',
-      inputs: ['Approved Application', 'Tailored PDF', 'Candidate Metadata'],
-      outputs: ['Application Status: submitted', 'Confirmation Receipt', 'AuditLog record'],
+        'Strict approval state machine transitions, portal field mapping, and safe browser automation for final application submission.',
+      inputs: ['Reviewed Application Dossier', 'Human Approval Confirmation'],
+      outputs: ['Application Status: submitted', 'Portal Confirmation Receipt', 'AuditLog record'],
       tables: ['applications', 'application_reviews', 'audit_logs'],
-      contract: `interface BrowserSubmissionContract {
+      contract: `interface ApprovalStateMachineContract {
   application_id: number;
-  status: 'submitted' | 'failed';
+  approval_status: 'approved' | 'rejected';
+  submission_status: 'staged' | 'submitted' | 'failed';
 }`,
     },
   };
