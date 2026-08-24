@@ -324,11 +324,11 @@ export const ApplicationDashboardView: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Top Banner: Phase 9 Subsystem */}
+      {/* Top Banner: Phase 10 Subsystem */}
       <div
         className="card"
         style={{
-          borderLeft: '4px solid #38bdf8',
+          borderLeft: '4px solid #34d399',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -338,14 +338,14 @@ export const ApplicationDashboardView: React.FC = () => {
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Globe size={24} color="#38bdf8" />
+            <Globe size={24} color="#34d399" />
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-              Playwright Browser Application-Preparation Engine
+              Portal-Specific Adapters & Robust Assisted Staging
             </h2>
-            <span className="badge badge-blue">Phase 9 Active</span>
+            <span className="badge badge-green">Phase 10 Active</span>
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            Automated form pre-filling, approved resume document uploads, visual screenshot audit, and strict final-submit safety guards.
+            Specialized Greenhouse, Lever, Ashby, Workday, and Generic Playwright adapters with layout change resilience, screening answer mapping, and global safety guards.
           </p>
         </div>
 

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ashby Job Application Demo</title>
+</head>
+<body>
+  <div class="ashby-application-container">
+    <h2>Lead Machine Learning Infrastructure Engineer</h2>
+    <form class="ashby-application-form" action="/apply" method="POST">
+      <label>Full Name *</label>
+      <input type="text" name="_system_field_name" placeholder="Full Name" required>
+
+      <label>Email *</label>
+      <input type="email" name="_system_field_email" placeholder="Email Address" required>
+
+      <label>Phone Number</label>
+      <input type="tel" name="_system_field_phoneNumber" placeholder="Phone">
+
+      <label>LinkedIn Profile</label>
+      <input type="text" name="linkedin" placeholder="LinkedIn URL">
+
+      <label>GitHub Profile</label>
+      <input type="text" name="github" placeholder="GitHub URL">
+
+      <label>Resume (PDF/TXT) *</label>
+      <input type="file" name="resume" required>
+
+      <button type="submit" class="ashby-submit-btn">Submit Application</button>
+    </form>
+  </div>
+</body>
+</html>

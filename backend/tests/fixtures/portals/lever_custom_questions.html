@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lever Job Application with Custom Questions</title>
+</head>
+<body>
+  <div class="application-page">
+    <h2>Principal Reliability Engineer</h2>
+    <form id="lever-form" action="/apply" method="POST">
+      <label>Full Name</label>
+      <input type="text" name="name" required>
+
+      <label>Email</label>
+      <input type="email" name="email" required>
+
+      <label>Resume</label>
+      <input type="file" name="resume">
+
+      <!-- Custom required screening question requiring human intervention -->
+      <div class="application-question">
+        <label>Expected Notice Period in Weeks (Required) *</label>
+        <input type="number" name="custom_notice_period_weeks" required>
+      </div>
+
+      <button type="submit" class="template-btn-submit">Submit application</button>
+    </form>
+  </div>
+</body>
+</html>
