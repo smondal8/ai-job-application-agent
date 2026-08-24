@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from app.services.preparation.adapter_base import BasePortalPreparationAdapter
 from app.services.preparation.adapters.generic_adapter import GenericPortalPreparationAdapter
 from app.services.preparation.adapters.greenhouse_adapter import GreenhousePreparationAdapter
