@@ -188,6 +188,48 @@ export const api = {
     return handleResponse<ApplicationStats>(res);
   },
 
+  // --- Phase 8: Human Approval Security Gate & Authorization ---
+  async approveApplication(
+    id: number,
+    payload?: { approver_notes?: string; approver_id?: string }
+  ): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async verifyApplicationApproval(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/verify-approval`);
+    return handleResponse<any>(res);
+  },
+
+  async revokeApplicationApproval(id: number, reason: string = 'Revoked by user'): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/revoke-approval?reason=${encodeURIComponent(reason)}`, {
+      method: 'POST',
+    });
+    return handleResponse<any>(res);
+  },
+
+  async rejectApplication(id: number, reason?: string): Promise<any> {
+    const url = reason
+      ? `${API_BASE}/applications/${id}/reject?reason=${encodeURIComponent(reason)}`
+      : `${API_BASE}/applications/${id}/reject`;
+    const res = await fetch(url, {
+      method: 'POST',
+    });
+    return handleResponse<any>(res);
+  },
+
+  async authorizePreparation(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/authorize-preparation`, {
+      method: 'POST',
+    });
+    return handleResponse<any>(res);
+  },
+
   async deleteApplication(id: number): Promise<void> {
     const res = await fetch(`${API_BASE}/applications/${id}`, {
       method: 'DELETE',

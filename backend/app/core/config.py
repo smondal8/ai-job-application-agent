@@ -141,9 +141,16 @@ class Settings(BaseSettings):
                 },
                 {
                     "stage_id": "approval_and_submission",
-                    "name": "Phase 8: Human Approval State Machine & Portal Preparation",
+                    "name": "Phase 8: Human Approval Security Boundary & State Machine",
+                    "status": "ready",
+                    "description": "Cryptographic human approval gate bound to immutable material inputs (job, candidate, tailored resume, screening answers), strict state machine enforcement, and preparation authorization",
+                    "active": True,
+                },
+                {
+                    "stage_id": "browser_automation_staging",
+                    "name": "Phase 9: Portal Field Mapping & Assisted Browser Staging",
                     "status": "planned",
-                    "description": "Strict approval state machine transitions, portal field mapping, and final submission staging",
+                    "description": "Playwright-based portal navigation, automated form population, and human-supervised field mapping",
                     "active": False,
                 },
             ],

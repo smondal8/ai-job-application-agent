@@ -17,6 +17,16 @@ from app.services.tailoring import (
     AtomicFactRegistry,
 )
 from app.services.application_service import application_service, ApplicationService
+from app.services.approval import (
+    approval_service,
+    ApprovalService,
+    ApplicationStatus,
+    compute_job_hash,
+    compute_candidate_hash,
+    compute_resume_hash,
+    compute_answers_hash,
+    generate_approval_token,
+)
 
 __all__ = [
     "storage_service",
@@ -46,4 +56,12 @@ __all__ = [
     "AtomicFactRegistry",
     "application_service",
     "ApplicationService",
+    "approval_service",
+    "ApprovalService",
+    "ApplicationStatus",
+    "compute_job_hash",
+    "compute_candidate_hash",
+    "compute_resume_hash",
+    "compute_answers_hash",
+    "generate_approval_token",
 ]
