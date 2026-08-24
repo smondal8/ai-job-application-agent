@@ -183,6 +183,8 @@ def test_preparation_engine_lever_staging(db_session: Session, setup_phase9_appr
 def test_non_negotiable_final_submit_guard_on_obvious_submit_button(db_session: Session, setup_phase9_approved_app: dict):
     """Proves that even when a prominent submit button is rendered, the browser engine NEVER clicks submit."""
     app_entity = setup_phase9_approved_app["app"]
+    app_entity.portal_type = "generic"
+    db_session.commit()
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'obvious_submit_app.html'}"
@@ -238,6 +240,8 @@ def test_preparation_engine_detects_auth_wall_and_stops_safely(db_session: Sessi
 def test_preparation_engine_pauses_on_ambiguous_fields(db_session: Session, setup_phase9_approved_app: dict):
     """Proves that when required unsupported/ambiguous fields exist, engine pauses for human input."""
     app_entity = setup_phase9_approved_app["app"]
+    app_entity.portal_type = "generic"
+    db_session.commit()
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'ambiguous_fields_app.html'}"
@@ -256,6 +260,8 @@ def test_preparation_engine_pauses_on_ambiguous_fields(db_session: Session, setu
 def test_preparation_engine_resists_adversarial_prompt_injection(db_session: Session, setup_phase9_approved_app: dict):
     """Proves that page content / prompt injections cannot alter system policy or force auto-submit."""
     app_entity = setup_phase9_approved_app["app"]
+    app_entity.portal_type = "generic"
+    db_session.commit()
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'prompt_injection_app.html'}"

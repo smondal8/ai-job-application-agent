@@ -226,7 +226,7 @@ interface ApprovalVerificationResponse {
       icon: <Globe size={24} color="#38bdf8" />,
       status: 'active',
       description:
-        'Playwright browser application preparation engine, generic and portal-specific adapters (Greenhouse/Lever/Ashby), server-side authorization check, automated form pre-filling, screenshot capture, and non-negotiable submit guards.',
+        'Playwright browser application preparation engine, server-side authorization check, automated form pre-filling, screenshot capture, and non-negotiable submit guards.',
       inputs: ['Authorized Application Preparation Token', 'Verified Candidate Facts', 'Approved Tailored Resume', 'Screening Answers'],
       outputs: ['Pre-filled Application Form', 'Execution Audit Run', 'Full-Page Screenshot Artifact', 'Unresolved Fields Log'],
       tables: ['applications', 'browser_preparation_runs', 'audit_logs'],
@@ -235,7 +235,7 @@ interface PreparationRunResponse {
   id: number;
   application_id: number;
   approval_token: string;
-  portal_type: 'greenhouse' | 'lever' | 'ashby' | 'generic';
+  portal_type: 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'generic';
   status: 'staged' | 'paused_for_human_input' | 'blocked_by_captcha' | 'blocked_by_auth' | 'failed';
   fields_filled: Array<{ field: string; value: string }>;
   unresolved_fields: Array<{ field: string; reason: string }>;
@@ -245,20 +245,25 @@ interface PreparationRunResponse {
   guard_triggered: boolean;
 }`,
     },
-    final_submission_monitoring: {
-      title: 'Human-in-the-Loop Final Submission & Tracking',
-      phase: 'Phase 10 (Planned)',
-      icon: <Layers size={24} color="#94a3b8" />,
-      status: 'planned',
+    portal_adapters_staging: {
+      title: 'Portal-Specific Adapters & Robust Staging',
+      phase: 'Phase 10 (Active)',
+      icon: <Layers size={24} color="#34d399" />,
+      status: 'active',
       description:
-        'User-supervised final submission execution, confirmation receipts, and post-submission lifecycle tracking.',
-      inputs: ['Staged Application Form', 'User Final Confirmation'],
-      outputs: ['Portal Submission Receipt', 'Lifecycle Tracking Updates'],
-      tables: ['applications', 'audit_logs'],
-      contract: `interface FinalSubmissionContract {
-  application_id: number;
-  submitted_at: string;
-  confirmation_receipt_id: string;
+        'Isolated portal-specific Playwright adapters (Greenhouse, Lever, Ashby, Workday, Generic), layout change resilience, screening answer mapping, global safety guard enforcement, and automated human handoff.',
+      inputs: ['Approved Application Dossier', 'Target ATS Portal (Greenhouse / Lever / Ashby / Workday)'],
+      outputs: ['High-Reliability Pre-Filled Form', 'Screening Answers Mapped', 'Layout Verification', 'Safety Screenshot'],
+      tables: ['applications', 'browser_preparation_runs', 'audit_logs'],
+      contract: `// Phase 10 Portal Adapters Contract
+interface PortalAdapterExecutionContract {
+  portal_adapter: 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'generic';
+  layout_valid: boolean;
+  fields_mapped_count: number;
+  unresolved_questions: Array<{ field: string; reason: string }>;
+  captcha_paused: boolean;
+  auth_wall_paused: boolean;
+  submit_avoided: true; // INVARIANT
 }`,
     },
   };

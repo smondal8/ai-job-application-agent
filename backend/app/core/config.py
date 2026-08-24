@@ -154,11 +154,11 @@ class Settings(BaseSettings):
                     "active": True,
                 },
                 {
-                    "stage_id": "final_submission_monitoring",
-                    "name": "Phase 10: Human-in-the-Loop Final Submission & Application Tracking",
-                    "status": "planned",
-                    "description": "User-supervised final submission execution, confirmation receipts, and post-submission lifecycle tracking",
-                    "active": False,
+                    "stage_id": "portal_adapters_staging",
+                    "name": "Phase 10: Portal-Specific Adapters & Robust Assisted Staging",
+                    "status": "ready",
+                    "description": "Isolated portal-specific Playwright adapters (Greenhouse, Lever, Ashby, Workday, Generic), layout change resilience, screening answer mapping, global safety guard enforcement, and automated human handoff",
+                    "active": True,
                 },
             ],
         }

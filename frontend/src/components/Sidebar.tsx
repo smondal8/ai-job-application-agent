@@ -32,7 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'applications',
       label: 'Applications & Staging',
       icon: <Briefcase size={18} />,
-      badge: 'Phase 9',
+      badge: 'Phase 10',
     },
     {
       id: 'tailoring',
@@ -68,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'pipeline',
       label: 'Pipeline Architecture',
       icon: <GitMerge size={18} />,
-      badge: '9 Stages',
+      badge: '10 Stages',
     },
     {
       id: 'schemas',
@@ -92,13 +92,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
     <aside className="sidebar">
       <div style={{ padding: '1.5rem 1.25rem', borderBottom: '1px solid var(--border-color)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <Sparkles size={20} color="#38bdf8" />
+          <Sparkles size={20} color="#34d399" />
           <span style={{ fontWeight: 600, fontSize: '0.875rem', letterSpacing: '0.025em' }}>
-            Phase 9 Active
+            Phase 10 Active
           </span>
         </div>
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-          Playwright Browser Application-Preparation Engine, Generic Adapters, and Non-Negotiable Final-Submit Guards.
+          Portal-Specific Adapters (Greenhouse, Lever, Ashby, Workday, Generic), Layout Resilience, and Global Submit Guards.
         </p>
       </div>
 
@@ -111,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
             key={item.id}
             onClick={() => onSelectTab(item.id)}
             className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-            style={{ width: '100%', border: 'none', background: activeTab === item.id ? 'rgba(56, 189, 248, 0.12)' : 'transparent', textAlign: 'left' }}
+            style={{ width: '100%', border: 'none', background: activeTab === item.id ? 'rgba(52, 211, 153, 0.12)' : 'transparent', textAlign: 'left' }}
           >
             {item.icon}
             <span style={{ flex: 1 }}>{item.label}</span>
@@ -122,7 +122,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                   padding: '0.125rem 0.375rem',
                   borderRadius: '4px',
                   backgroundColor:
-                    item.badge === 'Phase 9'
+                    item.badge === 'Phase 10'
+                      ? 'rgba(52, 211, 153, 0.25)'
+                      : item.badge === 'Phase 9'
                       ? 'rgba(56, 189, 248, 0.25)'
                       : item.badge === 'Phase 8'
                       ? 'rgba(52, 211, 153, 0.25)'
@@ -140,7 +142,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
                       ? 'rgba(52, 211, 153, 0.2)'
                       : '#1e293b',
                   color:
-                    item.badge === 'Phase 9'
+                    item.badge === 'Phase 10'
+                      ? '#34d399'
+                      : item.badge === 'Phase 9'
                       ? '#38bdf8'
                       : item.badge === 'Phase 8'
                       ? '#34d399'
@@ -167,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       </nav>
 
       <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <div>Branch: <code style={{ color: '#38bdf8' }}>feature/phase-09</code></div>
+        <div>Branch: <code style={{ color: '#34d399' }}>feature/phase-10</code></div>
         <div>LLM: <code style={{ color: 'var(--text-secondary)' }}>Ollama (qwen3:8b)</code></div>
       </div>
     </aside>

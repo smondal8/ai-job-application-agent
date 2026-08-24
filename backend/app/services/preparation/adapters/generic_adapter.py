@@ -1,7 +1,6 @@
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
 
 from app.core.logging import get_logger
 from app.services.preparation.adapter_base import (
@@ -9,13 +8,12 @@ from app.services.preparation.adapter_base import (
     PreparationContext,
     PreparationResult,
 )
-from app.services.preparation.safety_guard import PlaywrightSafetyGuard
 
-logger = get_logger("app.services.preparation.generic_adapter")
+logger = get_logger("app.services.preparation.adapters.generic")
 
 
 class GenericPortalPreparationAdapter(BasePortalPreparationAdapter):
-    """Generic portal preparation adapter using standard HTML5 form inspection."""
+    """Generic fallback portal preparation adapter using standard HTML5 form inspection."""
 
     @property
     def portal_name(self) -> str:
@@ -29,45 +27,16 @@ class GenericPortalPreparationAdapter(BasePortalPreparationAdapter):
         fields_filled: List[Dict[str, Any]] = []
         unresolved_fields: List[Dict[str, Any]] = []
         resume_uploaded = False
-        guard_triggered = False
-        screenshot_path: Optional[str] = None
 
-        logger.info(f"Opening portal URL for application #{context.application_id}: {context.portal_url}")
+        logger.info(f"[GenericAdapter] Opening portal URL for application #{context.application_id}: {context.portal_url}")
         await page.goto(context.portal_url, wait_until="load", timeout=30000)
 
-        # 1. Non-negotiable Check: CAPTCHA / Bot challenge detection
-        if await PlaywrightSafetyGuard.detect_captcha(page):
-            screenshot_path = await self._capture_screenshot(page, context, "captcha_blocked")
-            return PreparationResult(
-                application_id=context.application_id,
-                approval_token=context.approval_token,
-                portal_type=self.portal_name,
-                status="blocked_by_captcha",
-                fields_filled=fields_filled,
-                unresolved_fields=unresolved_fields,
-                captcha_detected=True,
-                screenshot_path=screenshot_path,
-                error_message="CAPTCHA or bot protection challenge detected. Execution safely paused for human intervention.",
-                duration_ms=(time.time() - start_time) * 1000,
-            )
+        # 1. Global Safety Checks (CAPTCHA / Bot detection / Auth wall)
+        safety_blocked = await self.check_global_safety_guards(page, context, start_time)
+        if safety_blocked:
+            return safety_blocked
 
-        # 2. Non-negotiable Check: Authentication wall detection
-        if await PlaywrightSafetyGuard.detect_auth_wall(page):
-            screenshot_path = await self._capture_screenshot(page, context, "auth_blocked")
-            return PreparationResult(
-                application_id=context.application_id,
-                approval_token=context.approval_token,
-                portal_type=self.portal_name,
-                status="blocked_by_auth",
-                fields_filled=fields_filled,
-                unresolved_fields=unresolved_fields,
-                auth_required=True,
-                screenshot_path=screenshot_path,
-                error_message="Authentication wall or login required. Execution safely paused for human intervention.",
-                duration_ms=(time.time() - start_time) * 1000,
-            )
-
-        # 3. Fill Standard Candidate Profile Fields
+        # 2. Fill Standard Candidate Profile Fields
         candidate = context.candidate
 
         # Full Name or First/Last Name
@@ -114,7 +83,7 @@ class GenericPortalPreparationAdapter(BasePortalPreparationAdapter):
             await page.fill("input[name*='website'], input[id*='website'], input[name*='portfolio'], input[id*='portfolio']", site_url)
             fields_filled.append({"field": "portfolio_url", "value": site_url, "selector": "portfolio/website"})
 
-        # 4. Upload Approved Resume Document
+        # 3. Upload Approved Resume Document
         if context.resume_file_path and Path(context.resume_file_path).exists():
             file_inputs = page.locator("input[type='file']")
             if await file_inputs.count() > 0:
@@ -122,17 +91,23 @@ class GenericPortalPreparationAdapter(BasePortalPreparationAdapter):
                 resume_uploaded = True
                 fields_filled.append({"field": "resume_file", "value": str(context.resume_file_path), "selector": "input[type=file]"})
 
-        # 5. Fill Cover Letter
+        # 4. Fill Cover Letter
         cover_letter_text = context.tailored_resume.cover_letter if context.tailored_resume and context.tailored_resume.cover_letter else None
         if cover_letter_text and await page.locator("textarea[name*='cover'], textarea[id*='cover'], textarea[name*='letter'], textarea[id*='letter']").count() > 0:
             await page.fill("textarea[name*='cover'], textarea[id*='cover'], textarea[name*='letter'], textarea[id*='letter']", cover_letter_text)
             fields_filled.append({"field": "cover_letter", "value": f"Cover letter ({len(cover_letter_text)} chars)", "selector": "textarea[cover]"})
 
-        # 6. Map Screening Answers from answers_payload
+        # 5. Map Screening Answers from answers_payload
         answers = context.answers_payload or {}
         for key, val in answers.items():
-            # Check for matching inputs or textareas or selects
-            key_clean = key.replace("_", "").lower()
+            if isinstance(val, bool):
+                bool_str = "yes" if val else "no"
+                radio = page.locator(f"input[type='radio'][value*='{bool_str}'], input[type='radio'][id*='{key}_{bool_str}']")
+                if await radio.count() > 0:
+                    await radio.first.check()
+                    fields_filled.append({"field": key, "value": val, "selector": f"radio[{key}={bool_str}]"})
+                    continue
+
             matching_inputs = page.locator(f"input[name*='{key}'], input[id*='{key}'], textarea[name*='{key}'], textarea[id*='{key}']")
             if await matching_inputs.count() > 0:
                 input_type = await matching_inputs.first.get_attribute("type") or "text"
@@ -145,24 +120,16 @@ class GenericPortalPreparationAdapter(BasePortalPreparationAdapter):
                     else:
                         await matching_inputs.first.uncheck()
                     fields_filled.append({"field": key, "value": bool(val), "selector": f"checkbox[{key}]"})
-            else:
-                # Try finding radio by value or label
-                if isinstance(val, bool):
-                    bool_val_str = "yes" if val else "no"
-                    radio = page.locator(f"input[type='radio'][value*='{bool_val_str}'], input[type='radio'][id*='{key}_{bool_val_str}']")
-                    if await radio.count() > 0:
-                        await radio.first.check()
-                        fields_filled.append({"field": key, "value": val, "selector": f"radio[{key}={bool_val_str}]"})
 
-        # 7. Discover Ambiguous / Unfilled Required Questions
+        # 6. Discover Ambiguous / Unfilled Required Questions
         required_inputs = page.locator("input[required], textarea[required], select[required]")
         req_count = await required_inputs.count()
         for i in range(req_count):
             inp = required_inputs.nth(i)
-            inp_val = await inp.input_value() if await inp.evaluate("el => 'value' in el") else ""
             inp_type = await inp.get_attribute("type") or ""
-            if inp_type == "file":
+            if inp_type in ["file", "submit", "button", "hidden"]:
                 continue
+            inp_val = await inp.input_value() if await inp.evaluate("el => 'value' in el") else ""
             if not inp_val or inp_val.strip() == "":
                 name = await inp.get_attribute("name") or await inp.get_attribute("id") or f"unnamed_field_{i}"
                 unresolved_fields.append({
@@ -171,15 +138,11 @@ class GenericPortalPreparationAdapter(BasePortalPreparationAdapter):
                     "reason": "Required field not matched in profile or answers payload",
                 })
 
-        # 8. NON-NEGOTIABLE FINAL SUBMISSION GUARD: Ensure submit button is NOT clicked
-        for submit_sel in PlaywrightSafetyGuard.SUBMIT_SELECTORS:
-            if await page.locator(submit_sel).count() > 0:
-                guard_triggered = True
-                logger.info(f"Safety guard active: Detected submit element '{submit_sel}'. Halting at staged checkpoint.")
-                break
+        # 7. Non-Negotiable Submit Guard Check
+        guard_triggered = await self.verify_submit_guard(page)
 
-        # Capture final staging screenshot
-        screenshot_path = await self._capture_screenshot(page, context, "staged_form")
+        # 8. Capture Staging Screenshot
+        screenshot_path = await self.capture_screenshot(page, context, "staged")
 
         status = "paused_for_human_input" if len(unresolved_fields) > 0 else "staged"
 
@@ -199,15 +162,3 @@ class GenericPortalPreparationAdapter(BasePortalPreparationAdapter):
             auth_required=False,
             duration_ms=(time.time() - start_time) * 1000,
         )
-
-    async def _capture_screenshot(self, page: Any, context: PreparationContext, label: str) -> str:
-        """Helper to capture screenshot and return relative/absolute path."""
-        try:
-            context.screenshot_dir.mkdir(parents=True, exist_ok=True)
-            filename = f"app_{context.application_id}_{label}_{int(time.time())}.png"
-            full_path = context.screenshot_dir / filename
-            await page.screenshot(path=str(full_path), full_page=True)
-            return str(full_path)
-        except Exception as e:
-            logger.warning(f"Failed to capture screenshot: {e}")
-            return ""
