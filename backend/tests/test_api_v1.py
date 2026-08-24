@@ -23,7 +23,7 @@ def test_api_v1_pipeline_endpoint(client: TestClient):
     assert "job_database" in stage_ids
     assert "job_discovery" in stage_ids
     assert "jd_analysis_matching" in stage_ids
-    assert "browser_preparation" in stage_ids
+    assert "application_dashboard" in stage_ids
 
 
 def test_job_crud_endpoints(client: TestClient):

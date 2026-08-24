@@ -22,6 +22,12 @@ import {
   TailoredResumeListResponse,
   ResumeTailoringRequest,
   TailoredResumeApprovalRequest,
+  ApplicationListResponse,
+  ApplicationCreateRequest,
+  ApplicationUpdateRequest,
+  ApplicationDossier,
+  ApplicationStats,
+  ApplicationReview,
   APIErrorResponse,
   CandidateProfile,
   WorkExperience,
@@ -106,6 +112,87 @@ export const api = {
   async testError(errorType: string): Promise<any> {
     const res = await fetch(`${API_BASE}/test-error?error_type=${errorType}`);
     return handleResponse<any>(res);
+  },
+
+  // --- Phase 7: Central Application Dashboard & Review ---
+  async getApplications(params: {
+    status?: string;
+    company?: string;
+    portal_type?: string;
+    job_id?: number;
+    search?: string;
+    page?: number;
+    page_size?: number;
+  } = {}): Promise<ApplicationListResponse> {
+    const query = new URLSearchParams();
+    if (params.status && params.status !== 'all') query.append('status', params.status);
+    if (params.company && params.company !== 'all') query.append('company', params.company);
+    if (params.portal_type && params.portal_type !== 'all') query.append('portal_type', params.portal_type);
+    if (params.job_id) query.append('job_id', params.job_id.toString());
+    if (params.search) query.append('search', params.search);
+    if (params.page) query.append('page', params.page.toString());
+    if (params.page_size) query.append('page_size', params.page_size.toString());
+
+    const res = await fetch(`${API_BASE}/applications?${query.toString()}`);
+    return handleResponse<ApplicationListResponse>(res);
+  },
+
+  async getApplication(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}`);
+    return handleResponse<any>(res);
+  },
+
+  async getApplicationDossier(id: number): Promise<ApplicationDossier> {
+    const res = await fetch(`${API_BASE}/applications/${id}/dossier`);
+    return handleResponse<ApplicationDossier>(res);
+  },
+
+  async createApplication(payload: ApplicationCreateRequest): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async updateApplication(id: number, payload: ApplicationUpdateRequest): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async linkResumeToApplication(id: number, tailoredResumeId: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/link-resume`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tailored_resume_id: tailoredResumeId }),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async addApplicationReview(id: number, payload: { reviewer_notes?: string; decision?: string; manual_edits?: any }): Promise<ApplicationReview> {
+    const res = await fetch(`${API_BASE}/applications/${id}/reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<ApplicationReview>(res);
+  },
+
+  async getApplicationStats(): Promise<ApplicationStats> {
+    const res = await fetch(`${API_BASE}/applications/stats/summary`);
+    return handleResponse<ApplicationStats>(res);
+  },
+
+  async deleteApplication(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/applications/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse<void>(res);
   },
 
   // --- Phase 6: Grounded Resume Tailoring & Document Compilation ---

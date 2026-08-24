@@ -76,6 +76,132 @@ export interface APIErrorResponse {
   };
 }
 
+// --- Phase 7: Central Application Dashboard & Review Types ---
+
+export interface ApplicationReview {
+  id: number;
+  decision: string; // pending, approved, rejected, changes_requested
+  reviewer_notes?: string | null;
+  manual_edits?: Record<string, any> | null;
+  reviewed_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface ApplicationItem {
+  id: number;
+  job_id: number;
+  tailored_resume_id?: number | null;
+  candidate_profile_id?: number | null;
+  status: string;
+  portal_type: string;
+  portal_url?: string | null;
+  cover_letter?: string | null;
+  answers_payload?: Record<string, any>;
+  submission_notes?: string | null;
+  reviewer_notes?: string | null;
+  error_message?: string | null;
+  applied_at?: string | null;
+  submitted_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  // Enriched
+  job_title: string;
+  job_company: string;
+  job_location?: string | null;
+  job_remote_type?: string | null;
+  fit_score?: number | null;
+  fit_level?: string | null;
+  recommendation?: string | null;
+  resume_validation_status?: string | null;
+}
+
+export interface ApplicationListResponse {
+  items: ApplicationItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ApplicationCreateRequest {
+  job_id: number;
+  tailored_resume_id?: number | null;
+  candidate_profile_id?: number | null;
+  status?: string | null;
+  portal_type?: string;
+  portal_url?: string | null;
+  cover_letter?: string | null;
+  answers_payload?: Record<string, any>;
+  submission_notes?: string | null;
+}
+
+export interface ApplicationUpdateRequest {
+  tailored_resume_id?: number | null;
+  candidate_profile_id?: number | null;
+  status?: string | null;
+  portal_type?: string | null;
+  portal_url?: string | null;
+  cover_letter?: string | null;
+  answers_payload?: Record<string, any> | null;
+  submission_notes?: string | null;
+  reviewer_notes?: string | null;
+}
+
+export interface ApplicationDossier {
+  application: {
+    id: number;
+    job_id: number;
+    tailored_resume_id?: number | null;
+    candidate_profile_id?: number | null;
+    status: string;
+    portal_type: string;
+    portal_url?: string | null;
+    cover_letter?: string | null;
+    answers_payload: Record<string, any>;
+    submission_notes?: string | null;
+    reviewer_notes?: string | null;
+    error_message?: string | null;
+    applied_at?: string | null;
+    submitted_at?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
+  };
+  job: Job;
+  tailored_resume?: TailoredResume | null;
+  available_resumes: Array<{
+    id: number;
+    prompt_version: string;
+    validation_status: string;
+    model_used?: string | null;
+    status: string;
+    updated_at?: string | null;
+  }>;
+  analysis?: JobAnalysis | null;
+  candidate?: {
+    id: number;
+    full_name: string;
+    email: string;
+    phone?: string | null;
+    location?: string | null;
+    headline?: string | null;
+    is_verified: boolean;
+  } | null;
+  reviews: ApplicationReview[];
+}
+
+export interface ApplicationStats {
+  total_applications: number;
+  status_counts: {
+    draft: number;
+    ready_for_review: number;
+    in_review: number;
+    approved_pending_submission: number;
+    submitted: number;
+    rejected: number;
+    archived: number;
+  };
+  portal_counts: Record<string, number>;
+}
+
 // --- Phase 6: Grounded Resume Tailoring & Document Compilation Types ---
 
 export interface UntracedClaim {
