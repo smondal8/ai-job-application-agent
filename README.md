@@ -1,200 +1,90 @@
-# AI Job Application Agent
+# AI Job Application Agent (v1.0.0 Production Release)
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-3178C6.svg)](https://www.typescriptlang.org/)
-[![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57.svg)](https://www.sqlite.org/)
-[![Phase 1](https://img.shields.io/badge/Phase-1%20Foundation-emerald.svg)](./ARCHITECTURE.md)
+[![Playwright](https://img.shields.io/badge/Playwright-Chromium-45ba4b.svg)](https://playwright.dev/)
+[![Ollama](https://img.shields.io/badge/Ollama-qwen3:8b%20GPU-black.svg)](https://ollama.com/)
+[![Tests](https://img.shields.io/badge/Tests-130%20Passing-brightgreen.svg)](./scripts/test.sh)
+[![Phase 12 Complete](https://img.shields.io/badge/Status-Phase%2012%20Complete%20(v1.0.0)-emerald.svg)](./docs/RELEASE_NOTES_v1.0.0.md)
 
-An intelligent, autonomous job application agent engineered with a local-first architecture and deterministic human-in-the-loop approval gates.
-
----
-
-## Documentation Quick Links
-- 📘 **[Architecture & Pipeline Specification (ARCHITECTURE.md)](./ARCHITECTURE.md)**: Deep technical architecture covering Phase 1 through Phase 6.
-- 🛠️ **[Operations & API Reference Guide (OPERATIONS.md)](./OPERATIONS.md)**: Detailed guide for starting/stopping services, process management, health probes, and full curl API examples.
+An intelligent, autonomous job application agent engineered with a **local-first architecture**, **local Ollama LLM execution (`qwen3:8b`)**, and **deterministic cryptographic human-in-the-loop approval gates**.
 
 ---
 
-## Phase 1 Scope & Foundation
-
-Phase 1 implements the complete foundational infrastructure and control plane:
-- **FastAPI Backend** with Python 3.12+ async server.
-- **React + TypeScript + Vite Frontend** diagnostic dashboard.
-- **SQLAlchemy 2.0 + Alembic Migrations** targeting local **SQLite (WAL mode)**.
-- **Pydantic Settings** environment configuration (`.env`).
-- **Structured Logging** with correlation `Request-ID` tracing across requests and logs.
-- **Health & Readiness Endpoints** (`/health`, `/health/live`, `/health/ready`).
-- **Standardized API Error Contract** (RFC-7807 compliant).
-- **Comprehensive Test Suite** (backend `pytest` + frontend `tsc` build).
-- **Git-Friendly Local Scripts & Makefile**.
-
-> **Note on Scope**: Phase 1 establishes the foundational infrastructure, data models, and API contracts. Job discovery scraping, JD analysis, resume tailoring, and browser automation will be introduced in subsequent phases as detailed in [ARCHITECTURE.md](./ARCHITECTURE.md).
+## 📚 Documentation Quick Links
+- 📘 **[Architecture Specification (docs/ARCHITECTURE.md)](./docs/ARCHITECTURE.md)**: Technical architecture covering all 12 phases.
+- 🛠️ **[Setup & Operations Runbook (docs/SETUP_AND_OPERATIONS.md)](./docs/SETUP_AND_OPERATIONS.md)**: Installation, Ollama configuration, backups/restore, and crash recovery.
+- 🔍 **[Troubleshooting & Diagnostics (docs/TROUBLESHOOTING.md)](./docs/TROUBLESHOOTING.md)**: Common failure modes, local LLM diagnostics, and browser staging.
+- 🚀 **[Release Notes v1.0.0 (docs/RELEASE_NOTES_v1.0.0.md)](./docs/RELEASE_NOTES_v1.0.0.md)**: Production milestone summary.
 
 ---
 
-## Pipeline Architecture Roadmap
+## 🏗️ 12-Stage Pipeline Architecture
 
 ```
-Phase 1: Core Foundation & Control Plane (Active)
-   ↓
-Phase 2: Job Discovery & Scraping (Planned)
-   ↓
-Phase 3: JD Analysis & Match Scoring (Planned)
-   ↓
-Phase 4: Resume Tailoring & Generation (Planned)
-   ↓
-Phase 5: Human-in-the-Loop Review & Approval (Planned)
-   ↓
-Phase 6: Browser Automation & Submission Gate (Planned)
-```
-
----
-
-## Directory Structure
-
-```
-ai-job-application-agent/
-├── .env.example              # Environment variables template
-├── .gitignore                # Git ignores for Python, Node, Vite, SQLite
-├── Makefile                  # Developer shortcuts
-├── README.md                 # Project overview & quickstart
-├── ARCHITECTURE.md           # End-to-end architecture specification
-├── OPERATIONS.md             # Operations runbook & API endpoints reference
-├── backend/
-│   ├── pyproject.toml        # Backend package metadata and pytest config
-│   ├── requirements.txt      # Production dependencies
-│   ├── requirements-dev.txt  # Testing & development dependencies
-│   ├── alembic.ini           # Alembic migration configuration
-│   ├── alembic/
-│   │   ├── env.py            # Alembic runtime environment
-│   │   └── versions/         # Migration scripts
-│   │       └── 0001_initial_schema.py
-│   ├── app/
-│   │   ├── main.py           # FastAPI application entrypoint & middleware
-│   │   ├── core/
-│   │   │   ├── config.py     # Pydantic BaseSettings configuration
-│   │   │   ├── database.py   # SQLAlchemy SQLite engine & sessionmaker
-│   │   │   ├── errors.py     # Unified API error handlers & contract
-│   │   │   └── logging.py    # Structured JSON & console loggers
-│   │   ├── models/           # SQLAlchemy ORM models
-│   │   │   ├── base.py       # Timestamp mixin & Base declarative
-│   │   │   ├── job.py        # Job listing model
-│   │   │   ├── analysis.py   # Job analysis & fit score model
-│   │   │   ├── resume.py     # Base & tailored resume models
-│   │   │   ├── application.py# Application state machine model
-│   │   │   ├── approval.py   # Human review record model
-│   │   │   └── audit.py      # System audit log model
-│   │   ├── schemas/          # Pydantic DTOs & response schemas
-│   │   │   ├── common.py     # Envelope & pagination schemas
-│   │   │   ├── health.py     # Health diagnostic schemas
-│   │   │   ├── config.py     # System config schemas
-│   │   │   ├── job.py        # Job schemas
-│   │   │   ├── resume.py     # Resume schemas
-│   │   │   └── application.py# Application schemas
-│   │   └── api/
-│   │       ├── router.py     # Top-level API router aggregator
-│   │       └── v1/
-│   │           ├── health.py # Health & diagnostic endpoints
-│   │           ├── config.py # Config, pipeline, & error-lab endpoints
-│   │           ├── jobs.py   # Jobs CRUD foundation
-│   │           ├── resumes.py# Resumes CRUD foundation
-│   │           └── applications.py # Applications foundation
-│   └── tests/                # Pytest test suite
-│       ├── conftest.py       # TestClient & SQLite fixtures
-│       ├── test_api_v1.py    # API endpoints tests
-│       ├── test_config.py    # Settings tests
-│       ├── test_database.py  # SQLAlchemy models & relational integrity
-│       ├── test_errors.py    # Unified error contract tests
-│       ├── test_health.py    # Health/liveness/readiness tests
-│       └── test_logging.py   # Request ID & log formatting tests
-├── frontend/
-│   ├── package.json          # React + TypeScript dependencies
-│   ├── tsconfig.json         # TypeScript compiler configuration
-│   ├── vite.config.ts        # Vite configuration with backend proxy
-│   ├── index.html            # Web application entry HTML
-│   └── src/
-│       ├── main.tsx          # React application root
-│       ├── App.tsx           # Dashboard layout & routing
-│       ├── index.css         # Dark mode tech design system
-│       ├── types/            # TypeScript type definitions
-│       ├── services/         # Typed API client
-│       └── components/       # Diagnostic & architectural UI components
-└── scripts/
-    ├── setup.sh              # Local environment bootstrapping
-    ├── run_backend.sh        # Starts FastAPI uvicorn backend
-    ├── run_frontend.sh       # Starts Vite dev server
-    ├── stop.sh               # Gracefully stops running services
-    ├── test.sh               # Runs pytest & frontend builds
-    └── migrate.sh            # Executes database migrations
+[Phase 01: Core Foundation] ──► [Phase 02: Verified Candidate Profile & Atomic Facts]
+                                            │
+                                            ▼
+[Phase 04: Job Discovery]   ◄── [Phase 03: Normalized Job DB & Deduplication]
+        │
+        ▼
+[Phase 05: JD Analysis & Objective Matching (Ollama qwen3:8b)]
+        │
+        ▼
+[Phase 06: Grounded Resume Tailoring & Atomic Fact Traceability]
+        │
+        ▼
+[Phase 07: Central Application Dashboard & Dossier Review]
+        │
+        ▼
+[Phase 08: Cryptographic Human Approval Gate & Material Hash Binding]
+        │
+        ▼
+[Phase 09: Playwright Browser Application Preparation Engine]
+        │
+        ▼
+[Phase 10: Portal-Specific Adapters (Greenhouse, Lever, Ashby, Workday, Generic)]
+        │
+        ▼
+[Phase 11: Application Hardening, Observability, Redaction & Disaster Recovery]
+        │
+        ▼
+[Phase 12: Complete System Stabilization & E2E Verification]
 ```
 
 ---
 
-## Quickstart Guide
+## 🔒 Security & Non-Negotiable Invariants
 
-### 1. Prerequisites
-- Python 3.12 or higher
-- Node.js 18+ and npm
+1. **Local-First Privacy**: Uses local Ollama (`qwen3:8b`) running on Apple Silicon GPU. Zero cloud LLM dependencies.
+2. **Untrusted Input Policy**: Treats all job descriptions, employer messages, and web DOM elements as untrusted.
+3. **No LLM Hallucinations**: Tailored resumes and cover letters must reference valid `source_fact_ids` tracing directly to verified candidate facts.
+4. **Server-Side Authorization Boundary**: Browser preparation cannot be launched without explicit cryptographic human approval bound to exact SHA-256 hashes.
+5. **Non-Negotiable Submit Guard**: Staging engines fill forms, upload resumes, capture screenshots, and strictly halt before the final submit button (`final_submit_clicked = False`).
 
-### 2. Setup Environment
-Run the automated setup script to create `.venv`, install all Python/Node dependencies, and apply migrations:
+---
+
+## ⚡ Quickstart
 
 ```bash
-make setup
-# OR: ./scripts/setup.sh
-```
+# 1. Automated environment setup & migrations
+./scripts/setup.sh
 
-### 3. Run Test Suite
-Verify backend tests and frontend TypeScript build:
+# 2. Run backend (Port 8000)
+./scripts/run_backend.sh
 
-```bash
-make test
-# OR: ./scripts/test.sh
-```
+# 3. Run frontend (Port 5173)
+./scripts/run_frontend.sh
 
-### 4. Start Applications Locally
-In separate terminal tabs:
+# 4. Execute test suite (130 tests)
+./scripts/test.sh
 
-**Backend (Port 8000):**
-```bash
-make run-backend
-# OR: ./scripts/run_backend.sh
-```
-
-**Frontend (Port 5173):**
-```bash
-make run-frontend
-# OR: ./scripts/run_frontend.sh
+# 5. Run end-to-end smoke test
+./scripts/smoke-test-phase12.sh
 ```
 
 - **Frontend Dashboard**: [http://127.0.0.1:5173](http://127.0.0.1:5173)
 - **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **Health Check Endpoint**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
-
-### 5. Stop Applications
-```bash
-make stop
-# OR: ./scripts/stop.sh
-```
-
----
-
-## API Endpoints Reference
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/health` | Full system health check (DB latency, storage write probe, uptime) |
-| `GET` | `/health/live` | Liveness probe for process monitoring |
-| `GET` | `/health/ready` | Readiness probe for subsystem traffic gating |
-| `GET` | `/api/v1/config` | Sanitized system configuration and phase status |
-| `GET` | `/api/v1/pipeline` | Detailed breakdown of all 6 architectural pipeline stages |
-| `GET` | `/api/v1/test-error` | Interactive tester for the unified API error contract |
-| `GET` | `/api/v1/jobs` | Paginated listing of job postings |
-| `POST`| `/api/v1/jobs` | Manual creation/import of a job posting |
-| `GET` | `/api/v1/jobs/{id}` | Retrieve single job by ID |
-| `GET` | `/api/v1/resumes` | Listing of stored candidate resumes |
-| `GET` | `/api/v1/applications` | Listing of application pipeline records |
-
-For full request/response schemas and curl examples, see **[OPERATIONS.md](./OPERATIONS.md)**.
+- **Health Diagnostics**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)

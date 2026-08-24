@@ -173,6 +173,13 @@ class Settings(BaseSettings):
                     "description": "Untrusted input containment, strict LLM security boundaries, idempotency, duplicate prevention, automated backup/restore, sensitive data redaction, crash recovery, and real-time observability telemetry",
                     "active": True,
                 },
+                {
+                    "stage_id": "system_stabilization_e2e",
+                    "name": "Phase 12: Complete System Stabilization, E2E Verification & Release",
+                    "status": "ready",
+                    "description": "Full end-to-end pipeline verification (discovery to staging), complete negative security boundaries, automated environment setup, comprehensive runbooks, and production stabilization",
+                    "active": True,
+                },
             ],
         }
 
