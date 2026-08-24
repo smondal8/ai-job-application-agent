@@ -28,6 +28,14 @@ from app.services.approval import (
     generate_approval_token,
 )
 
+from app.services.preparation import (
+    browser_preparation_engine,
+    BrowserPreparationEngine,
+    PlaywrightSafetyGuard,
+    preparation_adapter_registry,
+    PreparationAdapterRegistry,
+)
+
 __all__ = [
     "storage_service",
     "FileStorageService",
@@ -64,4 +72,9 @@ __all__ = [
     "compute_resume_hash",
     "compute_answers_hash",
     "generate_approval_token",
+    "browser_preparation_engine",
+    "BrowserPreparationEngine",
+    "PlaywrightSafetyGuard",
+    "preparation_adapter_registry",
+    "PreparationAdapterRegistry",
 ]

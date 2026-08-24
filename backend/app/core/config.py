@@ -148,9 +148,16 @@ class Settings(BaseSettings):
                 },
                 {
                     "stage_id": "browser_automation_staging",
-                    "name": "Phase 9: Portal Field Mapping & Assisted Browser Staging",
+                    "name": "Phase 9: Playwright Browser Application-Preparation Engine",
+                    "status": "ready",
+                    "description": "Playwright-based browser application preparation engine, generic adapter framework, strict server-side approval authorization verification, automated form pre-filling, screenshot capture, and non-negotiable final submission safety guards",
+                    "active": True,
+                },
+                {
+                    "stage_id": "final_submission_monitoring",
+                    "name": "Phase 10: Human-in-the-Loop Final Submission & Application Tracking",
                     "status": "planned",
-                    "description": "Playwright-based portal navigation, automated form population, and human-supervised field mapping",
+                    "description": "User-supervised final submission execution, confirmation receipts, and post-submission lifecycle tracking",
                     "active": False,
                 },
             ],

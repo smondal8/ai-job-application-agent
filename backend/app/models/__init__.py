@@ -4,7 +4,8 @@ from app.models.company import Company
 from app.models.ingestion import JobIngestionBatch
 from app.models.resume import Resume, TailoredResume
 from app.models.application import Application
-from app.models.approval import ApplicationReview
+from app.models.approval import ApplicationReview, ApplicationApproval
+from app.models.preparation import BrowserPreparationRun
 from app.models.analysis import JobAnalysis
 from app.models.audit import AuditLog
 from app.models.candidate import (
@@ -27,6 +28,8 @@ __all__ = [
     "TailoredResume",
     "Application",
     "ApplicationReview",
+    "ApplicationApproval",
+    "BrowserPreparationRun",
     "JobAnalysis",
     "AuditLog",
     "CandidateProfile",

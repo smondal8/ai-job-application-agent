@@ -230,6 +230,29 @@ export const api = {
     return handleResponse<any>(res);
   },
 
+  // --- Phase 9: Playwright Browser Application Preparation ---
+  async prepareApplication(
+    id: number,
+    payload: { custom_portal_url?: string; headless?: boolean } = {}
+  ): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/prepare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async getPreparationRuns(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/preparation-runs`);
+    return handleResponse<any>(res);
+  },
+
+  async getLatestPreparationRun(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/preparation-runs/latest`);
+    return handleResponse<any>(res);
+  },
+
   async deleteApplication(id: number): Promise<void> {
     const res = await fetch(`${API_BASE}/applications/${id}`, {
       method: 'DELETE',

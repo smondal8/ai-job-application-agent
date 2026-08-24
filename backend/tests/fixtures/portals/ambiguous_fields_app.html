@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ambiguous Question Job Application</title>
+</head>
+<body>
+  <form id="ambiguous_form" action="/apply" method="POST">
+    <label for="name">Name</label>
+    <input type="text" id="name" name="name" required>
+
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" required>
+
+    <!-- Required unsupported ambiguous field -->
+    <label for="favorite_quantum_eigenstate">Favorite Quantum Eigenstate (Required) *</label>
+    <input type="text" id="favorite_quantum_eigenstate" name="favorite_quantum_eigenstate" required>
+
+    <label for="preferred_desk_orientation_degrees">Preferred Desk Angle in Degrees (Required) *</label>
+    <input type="number" id="preferred_desk_orientation_degrees" name="preferred_desk_orientation_degrees" required>
+
+    <button type="submit">Submit Application</button>
+  </form>
+</body>
+</html>

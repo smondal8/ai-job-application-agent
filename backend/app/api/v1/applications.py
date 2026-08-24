@@ -18,10 +18,17 @@ from app.schemas.application import (
     ApplicationDossierResponse,
     ApplicationStatsResponse,
 )
+from app.models.preparation import BrowserPreparationRun
+from app.schemas.preparation import (
+    PreparationRunRequest,
+    PreparationRunResponse,
+    PreparationRunListResponse,
+)
 from app.services.application_service import application_service
 from app.services.approval import approval_service
+from app.services.preparation import browser_preparation_engine
 
-router = APIRouter(prefix="/applications", tags=["Application Dashboard & Human Approval Security (Phases 7 & 8)"])
+router = APIRouter(prefix="/applications", tags=["Application Dashboard, Approval & Browser Staging (Phases 7, 8, 9)"])
 
 
 @router.get("", response_model=ApplicationListResponse, summary="List Applications with Filters")
@@ -209,6 +216,59 @@ def authorize_preparation(
     """Strict server-side authorization check before browser preparation. Raises 403 Forbidden if unapproved or invalidated."""
     res = approval_service.authorize_for_preparation(db=db, application_id=application_id)
     return PreparationAuthorizationResponse(**res)
+
+
+# --- Phase 9: Playwright Browser Application Preparation Engine Endpoints ---
+
+@router.post("/{application_id}/prepare", response_model=PreparationRunResponse, summary="Run Browser Application Preparation")
+async def prepare_browser_application(
+    application_id: int,
+    payload: PreparationRunRequest = PreparationRunRequest(),
+    db: Session = Depends(get_db),
+) -> PreparationRunResponse:
+    """Execute Playwright browser application preparation (pre-filling fields, uploading resume, stopping at submit guard)."""
+    run_record = await browser_preparation_engine.prepare_application_async(
+        db=db,
+        application_id=application_id,
+        headless=payload.headless,
+        custom_portal_url=payload.custom_portal_url,
+    )
+    return PreparationRunResponse.model_validate(run_record)
+
+
+@router.get("/{application_id}/preparation-runs", response_model=PreparationRunListResponse, summary="List Browser Preparation Runs")
+def list_application_preparation_runs(
+    application_id: int,
+    db: Session = Depends(get_db),
+) -> PreparationRunListResponse:
+    """Retrieve history of browser preparation and staging execution runs for an application."""
+    runs = (
+        db.query(BrowserPreparationRun)
+        .filter(BrowserPreparationRun.application_id == application_id)
+        .order_by(BrowserPreparationRun.created_at.desc())
+        .all()
+    )
+    return PreparationRunListResponse(
+        items=[PreparationRunResponse.model_validate(r) for r in runs],
+        total=len(runs),
+    )
+
+
+@router.get("/{application_id}/preparation-runs/latest", response_model=Optional[PreparationRunResponse], summary="Get Latest Browser Preparation Run")
+def get_latest_preparation_run(
+    application_id: int,
+    db: Session = Depends(get_db),
+) -> Optional[PreparationRunResponse]:
+    """Retrieve the most recent browser preparation staging record for an application."""
+    run = (
+        db.query(BrowserPreparationRun)
+        .filter(BrowserPreparationRun.application_id == application_id)
+        .order_by(BrowserPreparationRun.created_at.desc())
+        .first()
+    )
+    if not run:
+        return None
+    return PreparationRunResponse.model_validate(run)
 
 
 @router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete Application")

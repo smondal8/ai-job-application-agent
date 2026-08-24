@@ -76,6 +76,42 @@ export interface APIErrorResponse {
   };
 }
 
+// --- Phase 9: Playwright Browser Preparation Engine Types ---
+
+export interface BrowserPreparationRun {
+  id: number;
+  application_id: number;
+  job_id: number;
+  approval_id?: number | null;
+  approval_token: string;
+  portal_type: string;
+  portal_url?: string | null;
+  status: 'initialized' | 'running' | 'staged' | 'paused_for_human_input' | 'blocked_by_captcha' | 'blocked_by_auth' | 'failed';
+  fields_filled: Array<{ field: string; value: string; selector?: string }>;
+  unresolved_fields: Array<{ field: string; type?: string; reason?: string }>;
+  resume_uploaded: boolean;
+  resume_file_path?: string | null;
+  screenshot_path?: string | null;
+  final_submit_clicked: boolean;
+  guard_triggered: boolean;
+  captcha_detected: boolean;
+  auth_required: boolean;
+  error_message?: string | null;
+  duration_ms?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PreparationRunListResponse {
+  items: BrowserPreparationRun[];
+  total: number;
+}
+
+export interface PreparationRunRequest {
+  custom_portal_url?: string | null;
+  headless?: boolean;
+}
+
 // --- Phase 8: Human Approval Security & State Machine Types ---
 
 export interface ApplicationApproval {

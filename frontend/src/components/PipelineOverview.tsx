@@ -221,20 +221,44 @@ interface ApprovalVerificationResponse {
 }`,
     },
     browser_automation_staging: {
-      title: 'Portal Field Mapping & Assisted Browser Staging',
-      phase: 'Phase 9 (Planned)',
+      title: 'Playwright Browser Application-Preparation Engine',
+      phase: 'Phase 9 (Active)',
+      icon: <Globe size={24} color="#38bdf8" />,
+      status: 'active',
+      description:
+        'Playwright browser application preparation engine, generic and portal-specific adapters (Greenhouse/Lever/Ashby), server-side authorization check, automated form pre-filling, screenshot capture, and non-negotiable submit guards.',
+      inputs: ['Authorized Application Preparation Token', 'Verified Candidate Facts', 'Approved Tailored Resume', 'Screening Answers'],
+      outputs: ['Pre-filled Application Form', 'Execution Audit Run', 'Full-Page Screenshot Artifact', 'Unresolved Fields Log'],
+      tables: ['applications', 'browser_preparation_runs', 'audit_logs'],
+      contract: `// Phase 9 Browser Preparation Contract
+interface PreparationRunResponse {
+  id: number;
+  application_id: number;
+  approval_token: string;
+  portal_type: 'greenhouse' | 'lever' | 'ashby' | 'generic';
+  status: 'staged' | 'paused_for_human_input' | 'blocked_by_captcha' | 'blocked_by_auth' | 'failed';
+  fields_filled: Array<{ field: string; value: string }>;
+  unresolved_fields: Array<{ field: string; reason: string }>;
+  resume_uploaded: boolean;
+  screenshot_path: string;
+  final_submit_clicked: false; // NON-NEGOTIABLE
+  guard_triggered: boolean;
+}`,
+    },
+    final_submission_monitoring: {
+      title: 'Human-in-the-Loop Final Submission & Tracking',
+      phase: 'Phase 10 (Planned)',
       icon: <Layers size={24} color="#94a3b8" />,
       status: 'planned',
       description:
-        'Assisted browser automation staging, field mapping to portal DOM schemas, and supervised human-in-the-loop portal submission.',
-      inputs: ['Authorized Application Preparation Token', 'Portal DOM Metadata'],
-      outputs: ['Pre-filled Application Form', 'Portal Submission Receipt'],
-      tables: ['applications', 'browser_staging_runs', 'audit_logs'],
-      contract: `interface BrowserStagingContract {
+        'User-supervised final submission execution, confirmation receipts, and post-submission lifecycle tracking.',
+      inputs: ['Staged Application Form', 'User Final Confirmation'],
+      outputs: ['Portal Submission Receipt', 'Lifecycle Tracking Updates'],
+      tables: ['applications', 'audit_logs'],
+      contract: `interface FinalSubmissionContract {
   application_id: number;
-  preparation_token: string;
-  portal_adapter: string;
-  staging_status: 'ready' | 'prefilled' | 'submitted';
+  submitted_at: string;
+  confirmation_receipt_id: string;
 }`,
     },
   };
