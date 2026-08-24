@@ -11,6 +11,7 @@ from app.api.v1.applications import router as applications_router
 from app.api.v1.resumes import router as resumes_router
 from app.api.v1.profile import router as profile_router
 from app.api.v1.raw_resumes import router as raw_resumes_router
+from app.api.v1.system import router as system_router
 
 api_v1_router = APIRouter()
 
@@ -34,3 +35,6 @@ api_v1_router.include_router(discovery_router)
 # Phase 5 Local LLM JD Analysis & Resume Tailoring
 api_v1_router.include_router(analysis_router)
 api_v1_router.include_router(tailoring_router)
+
+# Phase 11 Hardening, Observability & Resilience Routers
+api_v1_router.include_router(system_router)

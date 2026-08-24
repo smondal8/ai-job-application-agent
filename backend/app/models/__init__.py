@@ -17,6 +17,7 @@ from app.models.candidate import (
     RawResumeImport,
 )
 from app.models.discovery import JobDiscoveryRun, JobSearchProfile
+from app.models.idempotency import IdempotencyRecord
 
 __all__ = [
     "Base",
@@ -40,4 +41,5 @@ __all__ = [
     "RawResumeImport",
     "JobDiscoveryRun",
     "JobSearchProfile",
+    "IdempotencyRecord",
 ]

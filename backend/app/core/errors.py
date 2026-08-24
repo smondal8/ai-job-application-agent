@@ -136,6 +136,30 @@ class PipelineStageNotActiveError(AppException):
         )
 
 
+class ValidationError(AppException):
+    """Raised when business logic or entity validation fails."""
+
+    def __init__(self, message: str = "Validation failed", details: Optional[Any] = None):
+        super().__init__(
+            message=message,
+            code="VALIDATION_ERROR",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            details=details,
+        )
+
+
+class SecurityViolationError(AppException):
+    """Raised when an operation, LLM response, or payload violates security policy."""
+
+    def __init__(self, message: str = "Security boundary violation", details: Optional[Any] = None):
+        super().__init__(
+            message=message,
+            code="SECURITY_VIOLATION",
+            status_code=status.HTTP_403_FORBIDDEN,
+            details=details,
+        )
+
+
 def create_error_response(
     status_code: int,
     code: str,

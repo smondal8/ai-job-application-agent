@@ -12,9 +12,10 @@ import { PipelineOverview } from './components/PipelineOverview';
 import { SchemaViewer } from './components/SchemaViewer';
 import { SystemConfigCard } from './components/SystemConfigCard';
 import { ErrorLab } from './components/ErrorLab';
+import { SystemObservabilityView } from './components/SystemObservabilityView';
 import { api } from './services/api';
 import { HealthResponse, SystemConfigResponse, PipelineStageInfo } from './types';
-import { ArrowRight, Briefcase, Compass, Brain, FileText } from 'lucide-react';
+import { ArrowRight, Briefcase, Brain, FileText, Activity } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavTab>('overview');
@@ -73,16 +74,33 @@ export const App: React.FC = () => {
 
               {/* Highlights Grid */}
               <div className="grid-4">
+                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('observability')}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399' }}>
+                      <Activity size={18} />
+                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Observability & Backups</h4>
+                    </div>
+                    <span className="badge badge-green">Phase 11 Active</span>
+                  </div>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    Live operation latencies, sensitive data redaction lab, orphan crash recovery, and encrypted backup/restore.
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#34d399', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
+                    <span>Open Observability</span>
+                    <ArrowRight size={12} />
+                  </div>
+                </div>
+
                 <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('applications')}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8' }}>
                       <Briefcase size={18} />
-                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Applications Dashboard</h4>
+                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Applications & Staging</h4>
                     </div>
-                    <span className="badge badge-blue">Phase 7 Active</span>
+                    <span className="badge badge-blue">Phase 10 Active</span>
                   </div>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    Centralized application tracking, comprehensive dossier reviews, and tailored resume version linking.
+                    Portal-specific Playwright staging (Greenhouse, Lever, Ashby, Workday), assisted auto-fill, and final-submit guards.
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#38bdf8', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
                     <span>Open Dashboard</span>
@@ -123,27 +141,11 @@ export const App: React.FC = () => {
                     <ArrowRight size={12} />
                   </div>
                 </div>
-
-                <div className="card card-hover" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('discovery')}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#38bdf8' }}>
-                      <Compass size={18} />
-                      <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Job Discovery & Feeds</h4>
-                    </div>
-                    <span className="badge badge-blue">Phase 4 Active</span>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    Source-agnostic adapter framework with Greenhouse, Lever, and remote feeds plus safe manual fallbacks.
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#38bdf8', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
-                    <span>Launch Discovery</span>
-                    <ArrowRight size={12} />
-                  </div>
-                </div>
               </div>
             </div>
           )}
 
+          {activeTab === 'observability' && <SystemObservabilityView />}
           {activeTab === 'applications' && <ApplicationDashboardView />}
           {activeTab === 'tailoring' && <ResumeTailoringStudioView />}
           {activeTab === 'analysis' && <JDAnalysisView />}

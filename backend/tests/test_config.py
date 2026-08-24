@@ -77,6 +77,12 @@ def test_settings_public_config():
     assert phase10["status"] == "ready"
     assert phase10["active"] is True
 
+    # Verify Phase 11 is ready and active
+    phase11 = public_config["pipeline_stages"][10]
+    assert phase11["stage_id"] == "hardening_resilience_security"
+    assert phase11["status"] == "ready"
+    assert phase11["active"] is True
+
 
 def test_sqlite_db_path_handling():
     settings = Settings(DATABASE_URL="sqlite:///./custom_data/custom.db")

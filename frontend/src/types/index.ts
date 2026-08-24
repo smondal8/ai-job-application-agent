@@ -687,3 +687,72 @@ export interface VerifiedGroundTruthContextResponse {
   };
   formatted_llm_prompt_context: string;
 }
+
+// --- Phase 11: Hardening, Observability, Resilience & Disaster Recovery Types ---
+
+export interface LatencyMetric {
+  count: number;
+  avg_ms: number;
+  min_ms: number;
+  max_ms: number;
+  p95_ms: number;
+}
+
+export interface SystemMetricsResponse {
+  service: string;
+  version: string;
+  environment: string;
+  status: string;
+  uptime_seconds: number;
+  timestamp: string;
+  counters: Record<string, number>;
+  latencies: Record<string, LatencyMetric>;
+  database: {
+    healthy: boolean;
+    latency_ms: number | null;
+    dialect: string;
+  };
+  system: {
+    platform: string;
+    python_version: string;
+    pid: number;
+    llm_provider: string;
+    llm_model: string;
+  };
+}
+
+export interface BackupMetadata {
+  backup_id: string;
+  created_at: string;
+  db_dialect: string;
+  db_file?: string | null;
+  db_sha256?: string | null;
+  db_size_bytes: number;
+  artifacts_file?: string | null;
+  artifacts_sha256?: string | null;
+  artifacts_count: number;
+  artifacts_size_bytes: number;
+  app_version: string;
+}
+
+export interface BackupVerificationResponse {
+  is_valid: boolean;
+  backup_id: string;
+  verified_at: string;
+  reason?: string;
+  metadata?: BackupMetadata;
+}
+
+export interface BackupRestoreResponse {
+  status: string;
+  backup_id: string;
+  restored_at: string;
+  artifacts_restored: number;
+}
+
+export interface CrashRecoveryResponse {
+  reconciled_discovery_runs: number;
+  reconciled_preparation_runs: number;
+  total_recovered: number;
+  timestamp: string;
+}

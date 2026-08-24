@@ -42,10 +42,12 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "console"  # "console" | "json"
 
-    # Local Storage Directory
+    # Data and Local Storage Directories
+    DATA_DIR: str = "./data"
     STORAGE_DIR: str = "./data/storage"
 
     # Local LLM Subsystem (Ollama on Apple Silicon GPU)
+    LLM_PROVIDER: str = "ollama"
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "qwen3:8b"
     OLLAMA_TIMEOUT_SECONDS: float = 120.0
@@ -66,6 +68,10 @@ class Settings(BaseSettings):
 
     def ensure_directories(self) -> None:
         """Ensure necessary storage and database directories exist."""
+        data_path = Path(self.DATA_DIR)
+        data_path.mkdir(parents=True, exist_ok=True)
+        (data_path / "backups").mkdir(parents=True, exist_ok=True)
+
         storage_path = Path(self.STORAGE_DIR)
         storage_path.mkdir(parents=True, exist_ok=True)
 
@@ -158,6 +164,13 @@ class Settings(BaseSettings):
                     "name": "Phase 10: Portal-Specific Adapters & Robust Assisted Staging",
                     "status": "ready",
                     "description": "Isolated portal-specific Playwright adapters (Greenhouse, Lever, Ashby, Workday, Generic), layout change resilience, screening answer mapping, global safety guard enforcement, and automated human handoff",
+                    "active": True,
+                },
+                {
+                    "stage_id": "hardening_resilience_security",
+                    "name": "Phase 11: Hardening, Observability, Resilience & Security Boundary Protection",
+                    "status": "ready",
+                    "description": "Untrusted input containment, strict LLM security boundaries, idempotency, duplicate prevention, automated backup/restore, sensitive data redaction, crash recovery, and real-time observability telemetry",
                     "active": True,
                 },
             ],
