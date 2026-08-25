@@ -324,7 +324,7 @@ export const ApplicationDashboardView: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Top Banner: Phase 10 Subsystem */}
+      {/* Top Banner: Phases 7-10 Subsystems */}
       <div
         className="card"
         style={{
@@ -340,12 +340,12 @@ export const ApplicationDashboardView: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Globe size={24} color="#34d399" />
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-              Portal-Specific Adapters & Robust Assisted Staging
+              Application Dashboard, Approval Gate & Assisted Browser Staging
             </h2>
-            <span className="badge badge-green">Phase 10 Active</span>
+            <span className="badge badge-green">Phases 7–10 Active</span>
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-            Specialized Greenhouse, Lever, Ashby, Workday, and Generic Playwright adapters with layout change resilience, screening answer mapping, and global safety guards.
+            Phase 7 application reviews, Phase 8 human approval gate, Phase 9 Playwright preparation engine, and Phase 10 portal-specific adapters.
           </p>
         </div>
 
@@ -460,7 +460,7 @@ export const ApplicationDashboardView: React.FC = () => {
       </div>
 
       {/* Main Table + Dossier Split Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: selectedAppId ? '1fr 1.35fr' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: selectedAppId ? 'repeat(auto-fit, minmax(460px, 1fr))' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
         {/* Applications Catalog Table */}
         <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
           <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

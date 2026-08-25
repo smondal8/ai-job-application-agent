@@ -18,9 +18,12 @@ fi
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-8000}"
 
+cd "$ROOT_DIR/backend"
+echo "Applying/verifying database migrations with Alembic..."
+alembic upgrade head
+
 echo "Starting AI Job Application Agent FastAPI Backend on http://${HOST}:${PORT}..."
 echo "Swagger Docs: http://${HOST}:${PORT}/docs"
 echo "Health Check: http://${HOST}:${PORT}/health"
 
-cd "$ROOT_DIR/backend"
 exec uvicorn app.main:app --host "$HOST" --port "$PORT" --reload

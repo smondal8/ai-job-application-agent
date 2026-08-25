@@ -28,36 +28,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       id: 'overview',
       label: 'System Overview',
       icon: <LayoutDashboard size={18} />,
+      badge: 'Phase 1',
     },
     {
-      id: 'observability',
-      label: 'Observability & Backups',
-      icon: <Activity size={18} />,
-      badge: 'Phase 11',
-    },
-    {
-      id: 'applications',
-      label: 'Applications & Staging',
-      icon: <Briefcase size={18} />,
-      badge: 'Phase 10',
-    },
-    {
-      id: 'tailoring',
-      label: 'Resume Tailoring Studio',
-      icon: <FileText size={18} />,
-      badge: 'Phase 6',
-    },
-    {
-      id: 'analysis',
-      label: 'JD Analysis & Matching',
-      icon: <Brain size={18} />,
-      badge: 'Phase 5',
-    },
-    {
-      id: 'discovery',
-      label: 'Job Discovery & Feeds',
-      icon: <Compass size={18} />,
-      badge: 'Phase 4',
+      id: 'profile',
+      label: 'Candidate Profile & CV',
+      icon: <UserCheck size={18} />,
+      badge: 'Phase 2',
     },
     {
       id: 'jobs',
@@ -66,10 +43,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       badge: 'Phase 3',
     },
     {
-      id: 'profile',
-      label: 'Candidate Profile & CV',
-      icon: <UserCheck size={18} />,
-      badge: 'Phase 2',
+      id: 'discovery',
+      label: 'Job Discovery & Feeds',
+      icon: <Compass size={18} />,
+      badge: 'Phase 4',
+    },
+    {
+      id: 'analysis',
+      label: 'JD Analysis & Matching',
+      icon: <Brain size={18} />,
+      badge: 'Phase 5',
+    },
+    {
+      id: 'tailoring',
+      label: 'Resume Tailoring Studio',
+      icon: <FileText size={18} />,
+      badge: 'Phase 6',
+    },
+    {
+      id: 'applications',
+      label: 'Applications & Staging',
+      icon: <Briefcase size={18} />,
+      badge: 'Phases 7–10',
+    },
+    {
+      id: 'observability',
+      label: 'Observability & Backups',
+      icon: <Activity size={18} />,
+      badge: 'Phase 11',
     },
     {
       id: 'pipeline',
@@ -95,6 +96,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
     },
   ];
 
+  const getBadgeStyle = (badge?: string) => {
+    if (!badge) return {};
+    if (badge === 'Phase 1' || badge === 'Phase 2' || badge === 'Phase 6' || badge === 'Phase 12') {
+      return { backgroundColor: 'rgba(52, 211, 153, 0.18)', color: '#34d399' };
+    }
+    if (badge === 'Phases 7–10' || badge === 'Phase 11' || badge === 'Phase 4' || badge === 'Phase 3') {
+      return { backgroundColor: 'rgba(56, 189, 248, 0.18)', color: '#38bdf8' };
+    }
+    if (badge === 'Phase 5') {
+      return { backgroundColor: 'rgba(192, 132, 252, 0.18)', color: '#c084fc' };
+    }
+    return { backgroundColor: 'rgba(148, 163, 184, 0.12)', color: 'var(--text-secondary)' };
+  };
+
   return (
     <aside className="sidebar">
       <div style={{ padding: '1.5rem 1.25rem', borderBottom: '1px solid var(--border-color)' }}>
@@ -109,8 +124,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
         </p>
       </div>
 
-      <nav style={{ padding: '1rem', flex: 1 }}>
-        <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
+      <nav style={{ padding: '0.75rem', flex: 1 }}>
+        <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.625rem', paddingLeft: '0.5rem' }}>
           Navigation
         </div>
         {navItems.map((item) => (
@@ -118,64 +133,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
             key={item.id}
             onClick={() => onSelectTab(item.id)}
             className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
-            style={{ width: '100%', border: 'none', background: activeTab === item.id ? 'rgba(52, 211, 153, 0.12)' : 'transparent', textAlign: 'left' }}
+            title={item.label}
+            style={{
+              width: '100%',
+              border: 'none',
+              background: activeTab === item.id ? 'rgba(52, 211, 153, 0.12)' : 'transparent',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.625rem',
+            }}
           >
             {item.icon}
-            <span style={{ flex: 1 }}>{item.label}</span>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
             {item.badge && (
               <span
                 style={{
                   fontSize: '0.6875rem',
                   padding: '0.125rem 0.375rem',
                   borderRadius: '4px',
-                  backgroundColor:
-                    item.badge === 'Phase 12'
-                      ? 'rgba(52, 211, 153, 0.25)'
-                      : item.badge === 'Phase 11'
-                      ? 'rgba(56, 189, 248, 0.25)'
-                      : item.badge === 'Phase 10'
-                      ? 'rgba(56, 189, 248, 0.25)'
-                      : item.badge === 'Phase 9'
-                      ? 'rgba(56, 189, 248, 0.25)'
-                      : item.badge === 'Phase 8'
-                      ? 'rgba(52, 211, 153, 0.25)'
-                      : item.badge === 'Phase 7'
-                      ? 'rgba(56, 189, 248, 0.2)'
-                      : item.badge === 'Phase 6'
-                      ? 'rgba(52, 211, 153, 0.2)'
-                      : item.badge === 'Phase 5'
-                      ? 'rgba(192, 132, 252, 0.2)'
-                      : item.badge === 'Phase 4'
-                      ? 'rgba(56, 189, 248, 0.2)'
-                      : item.badge === 'Phase 3'
-                      ? 'rgba(56, 189, 248, 0.15)'
-                      : item.badge === 'Phase 2'
-                      ? 'rgba(52, 211, 153, 0.2)'
-                      : '#1e293b',
-                  color:
-                    item.badge === 'Phase 12'
-                      ? '#34d399'
-                      : item.badge === 'Phase 11'
-                      ? '#38bdf8'
-                      : item.badge === 'Phase 10'
-                      ? '#38bdf8'
-                      : item.badge === 'Phase 9'
-                      ? '#38bdf8'
-                      : item.badge === 'Phase 8'
-                      ? '#34d399'
-                      : item.badge === 'Phase 7'
-                      ? '#38bdf8'
-                      : item.badge === 'Phase 6'
-                      ? '#34d399'
-                      : item.badge === 'Phase 5'
-                      ? '#c084fc'
-                      : item.badge === 'Phase 4'
-                      ? '#38bdf8'
-                      : item.badge === 'Phase 3'
-                      ? '#38bdf8'
-                      : item.badge === 'Phase 2'
-                      ? '#34d399'
-                      : 'var(--text-secondary)',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  fontWeight: 600,
+                  ...getBadgeStyle(item.badge),
                 }}
               >
                 {item.badge}

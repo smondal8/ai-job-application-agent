@@ -9,6 +9,8 @@ import {
   X,
   ExternalLink,
   Bot,
+  User,
+  RefreshCw,
 } from 'lucide-react';
 import { api } from '../services/api';
 import {
@@ -87,29 +89,61 @@ export const CandidateProfileView: React.FC = () => {
   const [importLabel, setImportLabel] = useState('Pasted Candidate Resume');
   const [lastRawImport, setLastRawImport] = useState<RawResumeImport | null>(null);
   const [importing, setImporting] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
+
+  const syncProfileState = useCallback((data: CandidateProfile) => {
+    setProfile(data);
+    setEditProfileForm({
+      full_name: data.full_name || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      location: data.location || '',
+      headline: data.headline || '',
+      summary: data.summary || '',
+      linkedin_url: data.linkedin_url || '',
+      github_url: data.github_url || '',
+      portfolio_url: data.portfolio_url || '',
+    });
+  }, []);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const data = await api.getPrimaryProfile();
-      setProfile(data);
-      setEditProfileForm({
-        full_name: data.full_name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        location: data.location || '',
-        headline: data.headline || '',
-        summary: data.summary || '',
-        linkedin_url: data.linkedin_url || '',
-        github_url: data.github_url || '',
-        portfolio_url: data.portfolio_url || '',
-      });
+      syncProfileState(data);
     } catch (err: any) {
       console.error('Failed to load candidate profile:', err);
+      setFetchError(err.message || 'Failed to load candidate profile.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [syncProfileState]);
+
+  const handleInitializeProfile = async () => {
+    setIsInitializing(true);
+    setFetchError(null);
+    try {
+      let data: CandidateProfile;
+      try {
+        data = await api.getPrimaryProfile();
+      } catch {
+        data = await api.createProfile({
+          full_name: 'Candidate Name',
+          email: 'candidate@example.com',
+          headline: 'Software Engineer',
+          summary: '',
+        });
+      }
+      syncProfileState(data);
+    } catch (err: any) {
+      alert(`Initialization failed: ${err.message}`);
+      setFetchError(err.message);
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   useEffect(() => {
     fetchProfile();
@@ -130,7 +164,7 @@ export const CandidateProfileView: React.FC = () => {
     if (!profile) return;
     try {
       const updated = await api.updateProfile(profile.id, editProfileForm);
-      setProfile(updated);
+      syncProfileState(updated);
       alert('Candidate profile updated successfully.');
     } catch (err: any) {
       alert(`Error updating profile: ${err.message}`);
@@ -399,7 +433,7 @@ export const CandidateProfileView: React.FC = () => {
     if (!profile) return;
     try {
       const updated = await api.applyImportToProfile(importId, profile.id);
-      setProfile(updated);
+      syncProfileState(updated);
       alert('Draft facts applied to candidate profile as UNVERIFIED facts. Please review and verify each section.');
       setActiveSubTab('experience');
     } catch (err: any) {
@@ -410,17 +444,88 @@ export const CandidateProfileView: React.FC = () => {
   if (loading) {
     return (
       <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
+        <RefreshCw size={28} className="animate-spin" style={{ margin: '0 auto 0.75rem', color: 'var(--text-muted)' }} />
         <p style={{ color: 'var(--text-secondary)' }}>Loading Candidate Master Profile...</p>
       </div>
     );
   }
 
+  // Case A: Database/schema/backend error state
+  if (fetchError) {
+    return (
+      <div
+        className="card"
+        style={{
+          padding: '2.5rem',
+          textAlign: 'center',
+          maxWidth: '640px',
+          margin: '2rem auto',
+          borderLeft: '4px solid #ef4444',
+        }}
+      >
+        <AlertTriangle size={40} color="#ef4444" style={{ margin: '0 auto 1rem' }} />
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', color: '#f8fafc' }}>
+          Backend / Database Connection Error
+        </h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
+          Failed to load candidate profile from backend. If the database was recently created or reset, ensure schema migrations have been applied with <code>./scripts/migrate.sh</code> or <code>alembic upgrade head</code>.
+        </p>
+        <div
+          style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '6px',
+            padding: '0.75rem',
+            marginBottom: '1.5rem',
+            fontSize: '0.75rem',
+            color: '#fca5a5',
+            textAlign: 'left',
+            fontFamily: 'monospace',
+            wordBreak: 'break-word',
+          }}
+        >
+          {fetchError}
+        </div>
+        <button
+          onClick={fetchProfile}
+          className="btn btn-primary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <RefreshCw size={15} />
+          <span>Retry Connection</span>
+        </button>
+      </div>
+    );
+  }
+
+  // Case B: Valid empty profile state (Onboarding)
   if (!profile) {
     return (
-      <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-secondary)' }}>No profile found.</p>
-        <button onClick={fetchProfile} className="btn btn-primary" style={{ marginTop: '1rem' }}>
-          Initialize Master Profile
+      <div
+        className="card"
+        style={{
+          padding: '2.5rem',
+          textAlign: 'center',
+          maxWidth: '640px',
+          margin: '2rem auto',
+          borderTop: '4px solid var(--primary-color)',
+        }}
+      >
+        <User size={40} color="var(--primary-color)" style={{ margin: '0 auto 1rem' }} />
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+          Welcome to Candidate Profile Studio
+        </h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
+          No candidate master profile found in database. Initialize a default candidate profile to start managing verified facts, analyzing job descriptions, and generating tailored application materials.
+        </p>
+        <button
+          onClick={handleInitializeProfile}
+          disabled={isInitializing}
+          className="btn btn-primary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <RefreshCw size={16} className={isInitializing ? 'animate-spin' : ''} />
+          <span>{isInitializing ? 'Initializing Profile...' : 'Initialize Master Profile'}</span>
         </button>
       </div>
     );

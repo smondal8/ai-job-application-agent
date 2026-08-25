@@ -10,12 +10,24 @@ from app.services.discovery.base import BaseJobDiscoveryAdapter
 logger = get_logger("app.services.discovery.greenhouse")
 
 DEFAULT_GREENHOUSE_BOARDS = [
+    # Top Tier India / Bengaluru & Global Engineering Hubs
+    "phonepe",
     "stripe",
-    "figma",
-    "anthropic",
+    "okta",
+    "mongodb",
+    "elastic",
+    "rubrik",
+    "hackerrank",
+    "inmobi",
+    "twilio",
+    "gitlab",
+    "coinbase",
     "datadog",
     "cloudflare",
     "affirm",
+    "thoughtworks",
+    "anthropic",
+    "figma",
     "pinterest",
     "dropbox",
     "discord",
@@ -66,7 +78,7 @@ class GreenhouseDiscoveryAdapter(BaseJobDiscoveryAdapter):
 
                         standardized.append({
                             "external_id": str(rj.get("id")),
-                            "source": "greenhouse",
+                            "source": "discovery_greenhouse",
                             "title": rj.get("title", ""),
                             "company": board.capitalize(),
                             "location": location_str,

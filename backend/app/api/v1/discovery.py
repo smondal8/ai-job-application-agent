@@ -95,9 +95,40 @@ def create_search_profile(payload: SearchProfileCreate, db: Session = Depends(ge
     return new_profile
 
 
+def _ensure_default_search_profiles(db: Session) -> None:
+    """Ensure standard search profile exists for India/Bangalore/Remote backend engineering."""
+    existing = db.query(JobSearchProfile).filter(JobSearchProfile.name == "Senior / Staff Backend Engineer (India & Remote)").first()
+    if not existing:
+        default_profile = JobSearchProfile(
+            name="Senior / Staff Backend Engineer (India & Remote)",
+            description="Senior & Staff Backend Engineering roles across Bangalore, India and Remote hubs (Java, Spring Boot, Distributed Systems).",
+            criteria={
+                "keywords": [
+                    "Senior Software Engineer",
+                    "Staff Software Engineer",
+                    "Backend Engineer",
+                    "Java",
+                    "Spring Boot",
+                    "Distributed Systems",
+                ],
+                "locations": ["Bangalore", "Bengaluru", "India", "Remote"],
+                "remote_only": False,
+                "seniority_levels": ["senior", "staff", "lead"],
+                "sources": ["greenhouse", "lever", "remote_tech"],
+                "target_companies": [],
+                "max_results_per_source": 25,
+            },
+            is_active=True,
+            auto_run_interval_hours=24,
+        )
+        db.add(default_profile)
+        db.commit()
+
+
 @router.get("/search-profiles", response_model=SearchProfileListResponse)
 def list_search_profiles(db: Session = Depends(get_db)):
     """List all saved job search profiles."""
+    _ensure_default_search_profiles(db)
     profiles = db.query(JobSearchProfile).order_by(JobSearchProfile.created_at.desc()).all()
     return SearchProfileListResponse(
         items=[SearchProfileResponse.model_validate(p) for p in profiles],

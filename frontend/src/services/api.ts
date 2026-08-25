@@ -488,6 +488,15 @@ export const api = {
     return handleResponse<CandidateProfile>(res);
   },
 
+  async createProfile(data: Partial<CandidateProfile>): Promise<CandidateProfile> {
+    const res = await fetch(`${API_BASE}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<CandidateProfile>(res);
+  },
+
   async updateProfile(profileId: number, data: Partial<CandidateProfile>): Promise<CandidateProfile> {
     const res = await fetch(`${API_BASE}/profile/${profileId}`, {
       method: 'PUT',

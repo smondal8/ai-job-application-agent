@@ -1,20 +1,484 @@
 from datetime import datetime, timezone
+import html
 from typing import Any, Dict, List, Optional
 
 
 class ResumeDocumentCompiler:
-    """Deterministic document compiler for ATS Markdown, Plain Text, HTML, and Cover Letters."""
+    """Deterministic document compiler producing professional, ATS-optimized resumes and cover letters.
+    
+    Quality Standards:
+    - High-fidelity typography, consistent 0.5in margins, and strong visual hierarchy.
+    - Page-break controls and print CSS for multi-page support.
+    - Graceful omission of missing/optional data (never emits 'None', 'null', or empty sections).
+    - ATS-friendly semantic DOM structure.
+    """
+
+    def compile_html(
+        self,
+        candidate_info: Dict[str, Any],
+        tailored_data: Dict[str, Any],
+        educations: List[Dict[str, Any]],
+        projects: Optional[List[Dict[str, Any]]] = None,
+    ) -> str:
+        """Deterministically render a high-fidelity, professional HTML resume matching Reactive Resume visual quality."""
+        name = html.escape(candidate_info.get("full_name") or "Candidate")
+        headline = html.escape(candidate_info.get("headline") or "")
+        email = html.escape(candidate_info.get("email") or "")
+        phone = html.escape(candidate_info.get("phone") or "")
+        location = html.escape(candidate_info.get("location") or "")
+        linkedin = candidate_info.get("linkedin_url") or ""
+        github = candidate_info.get("github_url") or ""
+        portfolio = candidate_info.get("portfolio_url") or candidate_info.get("website") or ""
+
+        # Contact line items
+        contact_items: List[str] = []
+        if email:
+            contact_items.append(f'<a href="mailto:{email}" class="contact-link">{email}</a>')
+        if phone:
+            contact_items.append(f'<span>{phone}</span>')
+        if location:
+            contact_items.append(f'<span>{location}</span>')
+        if linkedin:
+            clean_li = linkedin.replace("https://www.", "").replace("http://www.", "").replace("https://", "")
+            contact_items.append(f'<a href="{html.escape(linkedin)}" target="_blank" class="contact-link">linkedin/{clean_li.split("/")[-1]}</a>')
+        if github:
+            clean_gh = github.replace("https://www.", "").replace("http://www.", "").replace("https://", "")
+            contact_items.append(f'<a href="{html.escape(github)}" target="_blank" class="contact-link">github/{clean_gh.split("/")[-1]}</a>')
+        if portfolio and portfolio != linkedin and portfolio != github:
+            clean_p = portfolio.replace("https://www.", "").replace("http://www.", "").replace("https://", "").rstrip("/")
+            contact_items.append(f'<a href="{html.escape(portfolio)}" target="_blank" class="contact-link">{clean_p}</a>')
+
+        contact_html = ' <span class="bullet-sep">&bull;</span> '.join(contact_items)
+
+        # 1. Summary Section
+        summary_obj = tailored_data.get("tailored_summary")
+        summary_text = summary_obj.get("text", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
+        summary_html = ""
+        if summary_text and summary_text.strip() and summary_text.strip().lower() != "none":
+            summary_html = f"""
+            <section class="resume-section">
+                <h2 class="section-title">Professional Summary</h2>
+                <p class="summary-text">{html.escape(summary_text.strip())}</p>
+            </section>
+            """
+
+        # 2. Skills Section
+        skills_items = tailored_data.get("highlighted_skills", [])
+        skills_html = ""
+        if skills_items:
+            # Group skills by category if available, otherwise render clean badges
+            categories: Dict[str, List[str]] = {}
+            flat_skills: List[str] = []
+            for sk in skills_items:
+                if isinstance(sk, dict):
+                    s_name = sk.get("name", "")
+                    s_cat = sk.get("category") or "Core Competencies"
+                    if s_name:
+                        categories.setdefault(s_cat, []).append(s_name)
+                        flat_skills.append(s_name)
+                elif isinstance(sk, str) and sk.strip():
+                    flat_skills.append(sk.strip())
+
+            if len(categories) > 1:
+                cat_rows = []
+                for cat_name, s_names in categories.items():
+                    clean_cat = cat_name.replace("_", " ").title()
+                    badges = "".join(f'<span class="skill-tag">{html.escape(s)}</span>' for s in s_names if s)
+                    cat_rows.append(f'<div class="skill-category-row"><span class="skill-category-label">{clean_cat}:</span> <div class="skill-badges-wrap">{badges}</div></div>')
+                skills_content = "".join(cat_rows)
+            else:
+                badges = "".join(f'<span class="skill-tag">{html.escape(s)}</span>' for s in flat_skills if s)
+                skills_content = f'<div class="skill-badges-wrap">{badges}</div>'
+
+            skills_html = f"""
+            <section class="resume-section">
+                <h2 class="section-title">Technical Skills & Competencies</h2>
+                <div class="skills-container">{skills_content}</div>
+            </section>
+            """
+
+        # 3. Experience Section
+        exp_list = tailored_data.get("tailored_experience", [])
+        exp_html = ""
+        if exp_list:
+            exp_blocks = []
+            for exp in exp_list:
+                comp = html.escape(exp.get("company") or "")
+                pos = html.escape(exp.get("position") or "")
+                exp_loc = html.escape(exp.get("location") or "")
+                start = html.escape(str(exp.get("start_date") or ""))
+                is_curr = exp.get("is_current")
+                end = "Present" if is_curr else html.escape(str(exp.get("end_date") or ""))
+                
+                date_str = f"{start} – {end}" if (start and end) else (start or end or "")
+
+                # Highlights
+                bullet_items = []
+                highlights = exp.get("tailored_highlights") or []
+                for h in highlights:
+                    h_text = h.get("text", "") if isinstance(h, dict) else str(h)
+                    if h_text and h_text.strip():
+                        bullet_items.append(f'<li>{html.escape(h_text.strip())}</li>')
+
+                # Direct description if no highlights
+                desc_line = ""
+                if not bullet_items and exp.get("description"):
+                    desc_line = f'<p class="exp-desc">{html.escape(exp["description"])}</p>'
+
+                bullets_html = f'<ul class="exp-bullets">{"".join(bullet_items)}</ul>' if bullet_items else desc_line
+
+                loc_span = f'<span class="entry-location">{exp_loc}</span>' if exp_loc else ''
+                sub_row = f"""
+                <div class="entry-sub">
+                    <span class="entry-company">{comp}</span>
+                    {loc_span}
+                </div>
+                """ if (comp or exp_loc) else ""
+
+                exp_blocks.append(f"""
+                <div class="entry-block">
+                    <div class="entry-header">
+                        <span class="entry-title"><strong>{pos}</strong></span>
+                        <span class="entry-dates">{date_str}</span>
+                    </div>
+                    {sub_row}
+                    {bullets_html}
+                </div>
+                """)
+
+            exp_html = f"""
+            <section class="resume-section">
+                <h2 class="section-title">Professional Experience</h2>
+                {"".join(exp_blocks)}
+            </section>
+            """
+
+        # 4. Education Section
+        edu_html = ""
+        if educations:
+            edu_blocks = []
+            for edu in educations:
+                inst = html.escape(edu.get("institution") or "")
+                deg = html.escape(edu.get("degree") or "")
+                field = html.escape(edu.get("field_of_study") or "")
+                deg_full = f"{deg} in {field}" if (deg and field) else (deg or field or "Degree")
+                start = html.escape(str(edu.get("start_date") or ""))
+                end = html.escape(str(edu.get("end_date") or ""))
+                date_str = f"{start} – {end}" if (start and end) else (start or end or "")
+                gpa = html.escape(str(edu.get("gpa") or ""))
+                gpa_span = f' <span class="edu-gpa">(GPA: {gpa})</span>' if gpa else ""
+
+                edu_blocks.append(f"""
+                <div class="entry-block">
+                    <div class="entry-header">
+                        <span class="entry-title"><strong>{deg_full}</strong>{gpa_span}</span>
+                        <span class="entry-dates">{date_str}</span>
+                    </div>
+                    <div class="entry-sub">
+                        <span class="entry-company">{inst}</span>
+                    </div>
+                </div>
+                """)
+
+            edu_html = f"""
+            <section class="resume-section">
+                <h2 class="section-title">Education</h2>
+                {"".join(edu_blocks)}
+            </section>
+            """
+
+        # 5. Projects Section
+        proj_html = ""
+        if projects:
+            proj_blocks = []
+            for p in projects:
+                p_name = html.escape(p.get("name") or "Project")
+                p_desc = html.escape(p.get("description") or "")
+                p_url = p.get("url") or ""
+                p_techs = p.get("technologies") or []
+                if isinstance(p_techs, list):
+                    tech_str = ", ".join(html.escape(t) for t in p_techs if t)
+                else:
+                    tech_str = html.escape(str(p_techs))
+
+                title_el = f'<a href="{html.escape(p_url)}" target="_blank" class="project-link"><strong>{p_name}</strong></a>' if p_url else f'<strong>{p_name}</strong>'
+                tech_span = f'<span class="entry-techs">[{tech_str}]</span>' if tech_str else ''
+
+                bullets = "".join(f'<li>{html.escape(h)}</li>' for h in p.get("highlights", []) if h)
+                bullets_ul = f'<ul class="exp-bullets">{bullets}</ul>' if bullets else ''
+                desc_p = f'<p class="exp-desc">{p_desc}</p>' if p_desc else ''
+
+                proj_blocks.append(f"""
+                <div class="entry-block">
+                    <div class="entry-header">
+                        <span class="entry-title">{title_el} {tech_span}</span>
+                    </div>
+                    {desc_p}
+                    {bullets_ul}
+                </div>
+                """)
+
+            if proj_blocks:
+                proj_html = f"""
+                <section class="resume-section">
+                    <h2 class="section-title">Selected Projects</h2>
+                    {"".join(proj_blocks)}
+                </section>
+                """
+
+        # Headline element
+        headline_el = f'<div class="header-headline">{headline}</div>' if headline else ''
+
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{name} — Resume</title>
+<style>
+  @page {{
+    size: letter;
+    margin: 0.5in;
+  }}
+  * {{
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }}
+  body {{
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.45;
+    color: #1e293b;
+    background-color: #ffffff;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 32px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }}
+  
+  /* Header */
+  .resume-header {{
+    text-align: center;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+  }}
+  .header-name {{
+    font-size: 20pt;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    line-height: 1.1;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+  }}
+  .header-headline {{
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #0284c7;
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }}
+  .header-contact {{
+    font-size: 9pt;
+    color: #475569;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+  }}
+  .contact-link {{
+    color: #0f172a;
+    text-decoration: none;
+  }}
+  .contact-link:hover {{
+    color: #0284c7;
+    text-decoration: underline;
+  }}
+  .bullet-sep {{
+    color: #94a3b8;
+    font-size: 8pt;
+  }}
+
+  /* Sections */
+  .resume-section {{
+    margin-bottom: 14px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }}
+  .section-title {{
+    font-size: 10pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #0f172a;
+    border-bottom: 1.5px solid #cbd5e1;
+    padding-bottom: 2px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+    break-after: avoid;
+  }}
+  .summary-text {{
+    font-size: 9.5pt;
+    line-height: 1.5;
+    color: #334155;
+    text-align: justify;
+  }}
+
+  /* Entry Blocks */
+  .entry-block {{
+    margin-bottom: 10px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }}
+  .entry-header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 10pt;
+  }}
+  .entry-title {{
+    color: #0f172a;
+    font-size: 10pt;
+  }}
+  .entry-dates {{
+    font-size: 9pt;
+    font-weight: 500;
+    color: #64748b;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }}
+  .entry-sub {{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 9pt;
+    margin-top: 1px;
+    margin-bottom: 3px;
+  }}
+  .entry-company {{
+    font-weight: 600;
+    color: #334155;
+  }}
+  .entry-location {{
+    color: #64748b;
+    font-size: 8.5pt;
+    font-style: italic;
+  }}
+  .entry-techs {{
+    font-size: 8.5pt;
+    color: #64748b;
+    font-weight: normal;
+    margin-left: 6px;
+  }}
+  .exp-desc {{
+    font-size: 9.5pt;
+    color: #334155;
+    line-height: 1.45;
+    margin-top: 2px;
+  }}
+  .exp-bullets {{
+    margin: 3px 0 0 0;
+    padding-left: 18px;
+    list-style-type: disc;
+  }}
+  .exp-bullets li {{
+    font-size: 9pt;
+    line-height: 1.4;
+    color: #334155;
+    margin-bottom: 2.5px;
+  }}
+
+  /* Skills */
+  .skills-container {{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }}
+  .skill-category-row {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 9pt;
+  }}
+  .skill-category-label {{
+    font-weight: 700;
+    color: #1e293b;
+    min-width: 110px;
+    flex-shrink: 0;
+  }}
+  .skill-badges-wrap {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }}
+  .skill-badge {{
+    background-color: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 8.5pt;
+    font-weight: 500;
+    line-height: 1.3;
+  }}
+
+  /* Academics */
+  .edu-gpa {{
+    font-size: 8.5pt;
+    font-weight: normal;
+    color: #64748b;
+  }}
+  .project-link {{
+    color: #0284c7;
+    text-decoration: none;
+  }}
+  .project-link:hover {{
+    text-decoration: underline;
+  }}
+
+  /* Media Print Adjustments */
+  @media print {{
+    body {{
+      padding: 0;
+      max-width: 100%;
+      background: transparent;
+    }}
+    .no-print {{
+      display: none;
+    }}
+  }}
+</style>
+</head>
+<body>
+  <header class="resume-header">
+    <h1>{name}</h1>
+    {headline_el}
+    <div class="header-contact">{contact_html}</div>
+  </header>
+
+  {summary_html}
+  {skills_html}
+  {exp_html}
+  {edu_html}
+  {proj_html}
+</body>
+</html>"""
 
     def compile_markdown(
         self,
         candidate_info: Dict[str, Any],
         tailored_data: Dict[str, Any],
         educations: List[Dict[str, Any]],
-        projects: List[Dict[str, Any]],
+        projects: Optional[List[Dict[str, Any]]] = None,
         include_traceability_annotations: bool = False,
     ) -> str:
-        """Deterministically render an ATS-optimized Markdown resume."""
+        """Deterministically render an ATS-optimized clean Markdown resume."""
         name = candidate_info.get("full_name", "Candidate")
+        headline = candidate_info.get("headline", "")
         email = candidate_info.get("email", "")
         phone = candidate_info.get("phone", "")
         location = candidate_info.get("location", "")
@@ -26,9 +490,13 @@ class ResumeDocumentCompiler:
 
         # 1. Header
         lines.append(f"# {name}")
+        if headline:
+            lines.append(f"**{headline}**")
+
         contact_parts = [p for p in [email, phone, location] if p]
         if contact_parts:
             lines.append(" | ".join(contact_parts))
+
         links = [p for p in [linkedin, github, portfolio] if p]
         if links:
             lines.append(" | ".join(links))
@@ -39,14 +507,14 @@ class ResumeDocumentCompiler:
         summary_text = summary_obj.get("text", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
         summary_fids = summary_obj.get("source_fact_ids", []) if isinstance(summary_obj, dict) else []
 
-        if summary_text:
+        if summary_text and summary_text.strip() and summary_text.strip().lower() != "none":
             lines.append("## Professional Summary")
             if include_traceability_annotations and summary_fids:
                 lines.append(f"{summary_text} `[^facts: {', '.join(summary_fids)}]`\n")
             else:
                 lines.append(f"{summary_text}\n")
 
-        # 3. Core Competencies & Skills
+        # 3. Skills
         skills_items = tailored_data.get("highlighted_skills", [])
         if skills_items:
             lines.append("## Core Competencies & Technical Skills")
@@ -57,7 +525,8 @@ class ResumeDocumentCompiler:
                 elif isinstance(sk, str):
                     skill_names.append(sk)
             clean_skills = [s for s in skill_names if s]
-            lines.append(", ".join(clean_skills) + "\n")
+            if clean_skills:
+                lines.append(", ".join(clean_skills) + "\n")
 
         # 4. Professional Experience
         exp_list = tailored_data.get("tailored_experience", [])
@@ -120,26 +589,32 @@ class ResumeDocumentCompiler:
         candidate_info: Dict[str, Any],
         tailored_data: Dict[str, Any],
         educations: List[Dict[str, Any]],
+        projects: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         """Deterministically render plain ASCII text resume."""
         name = (candidate_info.get("full_name") or "CANDIDATE").upper()
+        headline = candidate_info.get("headline", "")
         email = candidate_info.get("email", "")
         phone = candidate_info.get("phone", "")
         location = candidate_info.get("location", "")
 
         lines = [
-            "=" * 60,
+            "=" * 70,
             f"  {name}",
-            f"  {email}  |  {phone}  |  {location}",
-            "=" * 60,
-            "",
         ]
+        if headline:
+            lines.append(f"  {headline}")
+        
+        contact_line = "  |  ".join(filter(None, [email, phone, location]))
+        if contact_line:
+            lines.append(f"  {contact_line}")
+        lines.extend(["=" * 70, ""])
 
         # Summary
         summary_obj = tailored_data.get("tailored_summary")
         summary_text = summary_obj.get("text", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
-        if summary_text:
-            lines.extend(["PROFESSIONAL SUMMARY", "-" * 40, summary_text, ""])
+        if summary_text and summary_text.strip() and summary_text.strip().lower() != "none":
+            lines.extend(["PROFESSIONAL SUMMARY", "-" * 40, summary_text.strip(), ""])
 
         # Skills
         skills = tailored_data.get("highlighted_skills", [])
@@ -173,89 +648,18 @@ class ResumeDocumentCompiler:
                 lines.append(f"{full} -- {inst}")
             lines.append("")
 
+        # Projects
+        if projects:
+            lines.extend(["PROJECTS", "-" * 40])
+            for p in projects:
+                p_name = p.get("name", "Project")
+                p_desc = p.get("description", "")
+                lines.append(f"{p_name}: {p_desc}")
+                for h in p.get("highlights", []):
+                    lines.append(f"  * {h}")
+            lines.append("")
+
         return "\n".join(lines)
-
-    def compile_html(
-        self,
-        candidate_info: Dict[str, Any],
-        tailored_data: Dict[str, Any],
-        educations: List[Dict[str, Any]],
-    ) -> str:
-        """Deterministically render styled HTML resume."""
-        name = candidate_info.get("full_name", "Candidate")
-        email = candidate_info.get("email", "")
-        phone = candidate_info.get("phone", "")
-        location = candidate_info.get("location", "")
-
-        summary_obj = tailored_data.get("tailored_summary")
-        summary_text = summary_obj.get("text", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
-
-        skill_names = [s.get("name", "") if isinstance(s, dict) else str(s) for s in tailored_data.get("highlighted_skills", [])]
-        skills_html = "".join(f'<span class="skill-tag">{s}</span>' for s in skill_names if s)
-
-        exp_html_parts = []
-        for exp in tailored_data.get("tailored_experience", []):
-            comp = exp.get("company", "")
-            pos = exp.get("position", "")
-            start = exp.get("start_date", "")
-            end = "Present" if exp.get("is_current") else exp.get("end_date", "")
-            bullets = "".join(
-                f'<li>{h.get("text", "") if isinstance(h, dict) else str(h)}</li>'
-                for h in exp.get("tailored_highlights", [])
-            )
-            exp_html_parts.append(f"""
-            <div class="exp-block">
-                <div class="exp-header">
-                    <span class="exp-title"><strong>{pos}</strong> — {comp}</span>
-                    <span class="exp-date">{start} – {end}</span>
-                </div>
-                <ul class="exp-bullets">{bullets}</ul>
-            </div>
-            """)
-
-        edu_html_parts = []
-        for edu in educations:
-            inst = edu.get("institution", "")
-            deg = edu.get("degree", "")
-            field = edu.get("field_of_study", "")
-            deg_full = f"{deg} in {field}" if field else deg
-            edu_html_parts.append(f'<li><strong>{deg_full}</strong>, {inst}</li>')
-
-        return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>{name} — Resume</title>
-<style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.5; color: #1e293b; max-width: 800px; margin: 0 auto; padding: 2rem; }}
-  h1 {{ margin: 0 0 0.25rem; font-size: 1.75rem; color: #0f172a; }}
-  .contact {{ color: #64748b; font-size: 0.875rem; margin-bottom: 1.5rem; }}
-  h2 {{ font-size: 1.125rem; text-transform: uppercase; letter-spacing: 0.05em; color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.25rem; margin-top: 1.5rem; }}
-  .skill-tag {{ display: inline-block; background: #f1f5f9; color: #0f172a; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8125rem; margin: 0.2rem; font-weight: 500; }}
-  .exp-block {{ margin-bottom: 1.25rem; }}
-  .exp-header {{ display: flex; justify-content: space-between; font-size: 0.9375rem; margin-bottom: 0.25rem; }}
-  .exp-date {{ color: #64748b; font-size: 0.8125rem; }}
-  .exp-bullets {{ margin: 0.25rem 0 0; padding-left: 1.25rem; font-size: 0.875rem; }}
-  .exp-bullets li {{ margin-bottom: 0.25rem; }}
-</style>
-</head>
-<body>
-  <h1>{name}</h1>
-  <div class="contact">{email} &bull; {phone} &bull; {location}</div>
-  
-  <h2>Professional Summary</h2>
-  <p>{summary_text}</p>
-  
-  <h2>Technical Skills</h2>
-  <div>{skills_html}</div>
-  
-  <h2>Experience</h2>
-  {"".join(exp_html_parts)}
-  
-  <h2>Education</h2>
-  <ul>{"".join(edu_html_parts)}</ul>
-</body>
-</html>"""
 
     def compile_cover_letter(
         self,
@@ -285,22 +689,15 @@ class ResumeDocumentCompiler:
                     body_text_list.append(p)
             body_content = "\n\n".join(filter(None, body_text_list))
         else:
-            body_content = str(tailored_data.get("cover_letter") or "I am writing to express my strong interest in this opportunity.")
+            body_content = str(tailored_data.get("cover_letter") or f"I am writing to express my strong interest in the {role} opportunity at {company}.")
 
-        return f"""{name}
-{email} | {phone} | {location}
-{today_str}
+        header_lines = [name]
+        contact_line = " | ".join(filter(None, [email, phone, location]))
+        if contact_line:
+            header_lines.append(contact_line)
+        header_lines.extend([today_str, "", f"Hiring Team\n{company}", "", f"Dear {company} Hiring Team,", "", body_content, "", "Sincerely,", "", name])
 
-Hiring Team
-{company}
-
-Dear {company} Hiring Team,
-
-{body_content}
-
-Sincerely,
-
-{name}"""
+        return "\n".join(header_lines)
 
 
 resume_document_compiler = ResumeDocumentCompiler()

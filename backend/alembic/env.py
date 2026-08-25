@@ -28,6 +28,7 @@ target_metadata = Base.metadata
 
 # Override sqlalchemy.url with dynamic database URL from pydantic settings
 settings = get_settings()
+settings.ensure_directories()
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 

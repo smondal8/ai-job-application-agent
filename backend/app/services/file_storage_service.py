@@ -79,13 +79,24 @@ class FileStorageService:
         return relative_path, sha256_hash, len(content_bytes)
 
     def read_file_text(self, file_path_str: str) -> str:
-        """Read text content from a stored file safely."""
+        """Read text content from a stored file safely with format-aware binary handling."""
         target_path = Path(file_path_str).resolve()
         if not target_path.exists():
             raise BadRequestError("The requested stored file does not exist on disk.")
 
+        ext = target_path.suffix.lower()
+        content_bytes = target_path.read_bytes()
+
+        if ext in [".docx", ".doc"] or content_bytes.startswith(b"PK\x03\x04"):
+            from app.services.resume_parser_service import resume_parser
+            return resume_parser.extract_text_from_docx(content_bytes)
+
+        if ext == ".pdf" or content_bytes.startswith(b"%PDF"):
+            from app.services.resume_parser_service import resume_parser
+            return resume_parser.extract_text_from_pdf(content_bytes)
+
         try:
-            return target_path.read_text(encoding="utf-8", errors="replace")
+            return content_bytes.decode("utf-8", errors="replace")
         except Exception as exc:
             logger.error("Failed to read file text: %s", exc)
             raise BadRequestError(f"Could not read text from stored file: {exc}")
