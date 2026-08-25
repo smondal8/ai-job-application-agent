@@ -72,6 +72,7 @@ async def test_greenhouse_adapter_parsing_and_html_cleaning():
         assert job["title"] == "Senior Infrastructure Engineer"
         assert job["company"] == "Stripe"
         assert job["external_id"] == "9901"
+        assert job["source"] == "discovery_greenhouse"
         assert "<p>" not in job["description_raw"]
         assert "Senior Engineer" in job["description_raw"]
 
@@ -107,7 +108,7 @@ async def test_lever_adapter_parsing():
         assert len(jobs) == 1
         assert jobs[0]["title"] == "Staff Distributed Systems Engineer"
         assert jobs[0]["company"] == "Openai"
-        assert jobs[0]["source"] == "lever"
+        assert jobs[0]["source"] == "discovery_lever"
 
 
 @pytest.mark.asyncio

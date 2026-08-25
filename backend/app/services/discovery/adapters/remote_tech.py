@@ -39,7 +39,7 @@ class RemoteTechDiscoveryAdapter(BaseJobDiscoveryAdapter):
                         skills = item.get("tags") or []
                         standardized.append({
                             "external_id": str(item.get("id")),
-                            "source": "remote_tech",
+                            "source": "discovery_remote_tech",
                             "title": item.get("position", ""),
                             "company": item.get("company", "Unknown"),
                             "location": item.get("location") or "Remote",

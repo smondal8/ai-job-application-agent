@@ -352,6 +352,19 @@ export const JobDatabaseView: React.FC = () => {
                             {job.remote_type.toUpperCase()}
                           </span>
                         )}
+                        {job.source && (
+                          <span
+                            className="badge"
+                            style={{
+                              fontSize: '0.6875rem',
+                              background: job.source.startsWith('discovery') ? '#064e3b' : '#1e293b',
+                              color: job.source.startsWith('discovery') ? '#34d399' : '#cbd5e1',
+                              border: `1px solid ${job.source.startsWith('discovery') ? '#059669' : '#334155'}`,
+                            }}
+                          >
+                            {job.source.replace('_', ' ').toUpperCase()}
+                          </span>
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.25rem', fontSize: '0.8125rem', color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
@@ -690,9 +703,23 @@ export const JobDatabaseView: React.FC = () => {
               </p>
             </div>
 
-            <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              <div>Deduplication Signature Hash: <code>{selectedJob.dedup_hash || 'N/A'}</code></div>
-              <div>Source Feed: <code>{selectedJob.source}</code> {selectedJob.external_id && `· Ext ID: ${selectedJob.external_id}`}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#090d16', padding: '0.75rem', borderRadius: '6px', fontSize: '0.75rem', color: 'var(--text-muted)', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <div>Deduplication Signature Hash: <code>{selectedJob.dedup_hash || 'N/A'}</code></div>
+                <div>Source Feed: <code>{selectedJob.source}</code> {selectedJob.external_id && `· Ext ID: ${selectedJob.external_id}`}</div>
+              </div>
+              {selectedJob.url && (
+                <a
+                  href={selectedJob.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                >
+                  <ExternalLink size={14} />
+                  <span>Open Job Posting</span>
+                </a>
+              )}
             </div>
           </div>
         </div>

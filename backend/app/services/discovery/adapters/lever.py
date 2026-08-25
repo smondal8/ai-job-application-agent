@@ -9,13 +9,9 @@ from app.services.discovery.base import BaseJobDiscoveryAdapter
 logger = get_logger("app.services.discovery.lever")
 
 DEFAULT_LEVER_COMPANIES = [
-    "spotify",
-    "netflix",
-    "openai",
     "palantir",
-    "retool",
-    "postman",
-    "courier",
+    "spotify",
+    "mindtickle",
 ]
 
 
@@ -53,7 +49,7 @@ class LeverDiscoveryAdapter(BaseJobDiscoveryAdapter):
 
                         standardized.append({
                             "external_id": str(posting.get("id")),
-                            "source": "lever",
+                            "source": "discovery_lever",
                             "title": posting.get("text", ""),
                             "company": company.capitalize(),
                             "location": location_str,

@@ -36,6 +36,31 @@ class BaseJobDiscoveryAdapter(abc.ABC):
                 await asyncio.sleep(sleep_time)
             self._last_request_timestamp = time.time()
 
+    @staticmethod
+    def _expand_location_aliases(search_location: str) -> List[str]:
+        """Expand regional and city aliases for intelligent, high-precision matching."""
+        loc = search_location.lower().strip()
+        if loc in ["bangalore", "bengaluru", "blr"]:
+            return ["bangalore", "bengaluru", "blr", "india", "karnataka"]
+        if loc in ["india", "in"]:
+            return [
+                "india",
+                "bangalore",
+                "bengaluru",
+                "blr",
+                "hyderabad",
+                "pune",
+                "delhi",
+                "mumbai",
+                "chennai",
+                "noida",
+                "gurgaon",
+                "gurugram",
+            ]
+        if loc in ["remote", "anywhere", "worldwide", "distributed"]:
+            return ["remote", "anywhere", "worldwide", "distributed"]
+        return [loc]
+
     def filter_by_criteria(self, jobs: List[Dict[str, Any]], criteria: SearchCriteria) -> List[Dict[str, Any]]:
         """Filter standardized job records against user search criteria."""
         filtered = []
@@ -57,15 +82,30 @@ class BaseJobDiscoveryAdapter(abc.ABC):
                 continue
 
             # 2. Remote filter
-            if criteria.remote_only and remote_type not in ["remote", "hybrid"]:
+            if criteria.remote_only and remote_type != "remote":
                 if "remote" not in location and "remote" not in title:
                     continue
 
-            # 3. Location filter
+            # 3. Location filter with intelligent aliasing
             if locations:
-                matches_location = any(loc in location for loc in locations) or (
-                    "remote" in locations and remote_type == "remote"
-                )
+                matches_location = False
+                for loc_query in locations:
+                    clean_query = loc_query.lower().strip()
+                    if not clean_query:
+                        continue
+
+                    if clean_query in ["remote", "anywhere", "worldwide", "distributed"]:
+                        if remote_type == "remote" or any(
+                            r in location or r in title for r in ["remote", "anywhere", "worldwide", "distributed"]
+                        ):
+                            matches_location = True
+                            break
+                    else:
+                        aliases = self._expand_location_aliases(clean_query)
+                        if any(alias in location for alias in aliases):
+                            matches_location = True
+                            break
+
                 if not matches_location:
                     continue
 
