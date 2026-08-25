@@ -122,3 +122,76 @@ def test_compiler_markdown_and_plain_text():
     assert "Dear Netflix Hiring Team," in letter_output
     assert "I am excited to apply for the Principal Infrastructure Engineer position." in letter_output
     assert "Sincerely,\n\nJordan Lee" in letter_output
+
+
+def test_compiler_incomplete_profile_gracefully_omits_empty_sections():
+    """Verify that missing/optional candidate facts are gracefully omitted without 'None', 'null', or empty blocks."""
+    candidate_info = {
+        "full_name": "Minimalist Candidate",
+        "email": "min@example.com",
+        "phone": None,
+        "location": None,
+        "headline": None,
+        "linkedin_url": None,
+        "github_url": None,
+        "portfolio_url": None,
+    }
+    tailored_data = {
+        "tailored_summary": None,
+        "highlighted_skills": ["Python", "Go"],
+        "tailored_experience": [
+            {
+                "company": "Startup Co",
+                "position": "Backend Developer",
+                "start_date": "2023",
+                "end_date": None,
+                "is_current": True,
+                "tailored_highlights": [{"text": "Built real-time messaging pipeline."}],
+            }
+        ],
+    }
+
+    html_out = resume_document_compiler.compile_html(
+        candidate_info=candidate_info,
+        tailored_data=tailored_data,
+        educations=[],
+        projects=[],
+    )
+
+    # Invariants:
+    assert "None" not in html_out
+    assert "null" not in html_out
+    assert "Professional Summary" not in html_out
+    assert "Education" not in html_out
+    assert "Selected Projects" not in html_out
+    assert "Minimalist Candidate" in html_out
+    assert "min@example.com" in html_out
+    assert "Backend Developer" in html_out
+
+
+def test_compiler_print_css_and_page_break_rules():
+    """Verify that generated HTML includes print pagination rules and avoids orphan headings."""
+    candidate_info = {"full_name": "Senior Architect", "email": "arch@example.com"}
+    tailored_data = {
+        "tailored_summary": {"text": "Expert architect."},
+        "highlighted_skills": ["C++", "Rust", "Distributed Systems"],
+        "tailored_experience": [
+            {
+                "company": "Big Tech Corp",
+                "position": "Staff Engineer",
+                "start_date": "2018",
+                "end_date": "2024",
+                "tailored_highlights": [{"text": f"Accomplishment {i}"} for i in range(1, 10)],
+            }
+        ],
+    }
+    html_out = resume_document_compiler.compile_html(
+        candidate_info=candidate_info,
+        tailored_data=tailored_data,
+        educations=[{"institution": "Stanford", "degree": "M.S.", "field_of_study": "CS"}],
+    )
+
+    assert "@page" in html_out
+    assert "break-inside: avoid;" in html_out
+    assert "page-break-inside: avoid;" in html_out
+    assert "break-after: avoid;" in html_out

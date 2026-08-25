@@ -10,6 +10,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ health, loading, onRefresh }) => {
   const isHealthy = health?.status === 'healthy';
+  const displayVersion = health?.version ? `v${health.version}` : 'v1.0.0';
 
   return (
     <header className="app-header">
@@ -35,13 +36,13 @@ export const Header: React.FC<HeaderProps> = ({ health, loading, onRefresh }) =>
               AI Job Application Agent
             </h1>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Phase 1: Core Foundation & Infrastructure
+              Autonomous Application Preparation & Safety System
             </p>
           </div>
         </div>
 
-        <span className="badge badge-blue" style={{ marginLeft: '0.5rem' }}>
-          v0.1.0 (Phase 1)
+        <span className="badge badge-green" style={{ marginLeft: '0.5rem' }}>
+          {displayVersion} (Phase 12 Complete)
         </span>
       </div>
 

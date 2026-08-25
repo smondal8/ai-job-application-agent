@@ -224,11 +224,13 @@ class ResumeTailoringService:
             candidate_info=candidate_info,
             tailored_data=raw_llm_json,
             educations=educations,
+            projects=projects,
         )
         compiled_html = self.compiler.compile_html(
             candidate_info=candidate_info,
             tailored_data=raw_llm_json,
             educations=educations,
+            projects=projects,
         )
         compiled_cover_letter = self.compiler.compile_cover_letter(
             candidate_info=candidate_info,

@@ -97,10 +97,10 @@ export const App: React.FC = () => {
                       <Briefcase size={18} />
                       <h4 style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Applications & Staging</h4>
                     </div>
-                    <span className="badge badge-blue">Phase 10 Active</span>
+                    <span className="badge badge-blue">Phases 7–10 Active</span>
                   </div>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    Portal-specific Playwright staging (Greenhouse, Lever, Ashby, Workday), assisted auto-fill, and final-submit guards.
+                    Application reviews (Phase 7), approval gate (Phase 8), browser prep (Phase 9), and portal adapters (Phase 10).
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#38bdf8', fontSize: '0.75rem', marginTop: '1rem', fontWeight: 600 }}>
                     <span>Open Dashboard</span>

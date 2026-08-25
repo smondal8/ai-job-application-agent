@@ -356,9 +356,10 @@ class CandidateProfileService:
             filename=filename, content_bytes=content_bytes, mime_type=mime_type
         )
         
-        # Read text
-        raw_text = storage_service.read_file_text(file_path)
-        parsed_draft = resume_parser.parse_raw_text(raw_text)
+        # Format-aware extraction: safely parses DOCX, PDF, JSON, and Markdown binary/text
+        clean_extracted_text, parsed_draft = resume_parser.parse_file_bytes(
+            content_bytes=content_bytes, filename=filename, mime_type=mime_type
+        )
 
         raw_import = RawResumeImport(
             profile_id=profile_id,
@@ -367,7 +368,7 @@ class CandidateProfileService:
             file_hash=file_hash,
             file_size_bytes=size_bytes,
             mime_type=mime_type,
-            raw_text=raw_text,
+            raw_text=clean_extracted_text,
             parsed_data=parsed_draft,
             status="parsed",
         )
@@ -417,14 +418,22 @@ class CandidateProfileService:
             profile.full_name = draft_profile["full_name"]
         if draft_profile.get("email"):
             profile.email = draft_profile["email"]
-        if draft_profile.get("phone"):
+        if draft_profile.get("phone") is not None:
             profile.phone = draft_profile["phone"]
-        if draft_profile.get("summary"):
+        if draft_profile.get("location") is not None:
+            profile.location = draft_profile["location"]
+        if draft_profile.get("headline") is not None:
+            profile.headline = draft_profile["headline"]
+        if draft_profile.get("summary") is not None:
             profile.summary = draft_profile["summary"]
-        if draft_profile.get("linkedin_url"):
+        if draft_profile.get("website") is not None:
+            profile.website = draft_profile["website"]
+        if draft_profile.get("linkedin_url") is not None:
             profile.linkedin_url = draft_profile["linkedin_url"]
-        if draft_profile.get("github_url"):
+        if draft_profile.get("github_url") is not None:
             profile.github_url = draft_profile["github_url"]
+        if draft_profile.get("portfolio_url") is not None:
+            profile.portfolio_url = draft_profile["portfolio_url"]
 
         # Note: Imported profile remains UNVERIFIED until user confirms
         profile.is_verified = False
