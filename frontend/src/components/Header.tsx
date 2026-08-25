@@ -14,46 +14,56 @@ export const Header: React.FC<HeaderProps> = ({ health, loading, onRefresh }) =>
 
   return (
     <header className="app-header">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#0284c7',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              fontWeight: 700,
-            }}
-          >
-            AI
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.125rem', fontWeight: 700, lineHeight: 1.2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', flexShrink: 0 }}>
+        <div
+          style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '8px',
+            backgroundColor: '#0284c7',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: '0.9375rem',
+            flexShrink: 0,
+          }}
+        >
+          AI
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'nowrap' }}>
+            <h1 style={{ fontSize: '1.0625rem', fontWeight: 700, lineHeight: 1.2, margin: 0, color: '#f8fafc', whiteSpace: 'nowrap' }}>
               AI Job Application Agent
             </h1>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Autonomous Application Preparation & Safety System
-            </p>
+            <span
+              className="badge badge-green"
+              style={{
+                fontSize: '0.6875rem',
+                padding: '0.15rem 0.5rem',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {displayVersion} (Phase 12 Complete)
+            </span>
           </div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+            Autonomous Application Preparation &amp; Safety System
+          </p>
         </div>
-
-        <span className="badge badge-green" style={{ marginLeft: '0.5rem' }}>
-          {displayVersion} (Phase 12 Complete)
-        </span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         {/* Backend health status indicator */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '0.5rem',
-            padding: '0.375rem 0.75rem',
+            padding: '0.35rem 0.75rem',
             borderRadius: '9999px',
             backgroundColor: 'rgba(15, 23, 42, 0.6)',
             border: '1px solid var(--border-color)',
@@ -76,11 +86,11 @@ export const Header: React.FC<HeaderProps> = ({ health, loading, onRefresh }) =>
         <button
           onClick={onRefresh}
           className="btn btn-secondary"
-          style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
+          style={{ padding: '0.35rem 0.75rem', fontSize: '0.8125rem' }}
           title="Refresh health checks"
           disabled={loading}
         >
-          <RefreshCw size={14} />
+          <RefreshCw size={13} />
           <span>Refresh</span>
         </button>
 
@@ -90,9 +100,9 @@ export const Header: React.FC<HeaderProps> = ({ health, loading, onRefresh }) =>
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-secondary"
-          style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', textDecoration: 'none' }}
+          style={{ padding: '0.35rem 0.75rem', fontSize: '0.8125rem', textDecoration: 'none' }}
         >
-          <BookOpen size={14} />
+          <BookOpen size={13} />
           <span>API Docs (Swagger)</span>
         </a>
       </div>

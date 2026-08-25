@@ -124,8 +124,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
         </p>
       </div>
 
-      <nav style={{ padding: '1rem', flex: 1 }}>
-        <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
+      <nav style={{ padding: '0.75rem', flex: 1 }}>
+        <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.625rem', paddingLeft: '0.5rem' }}>
           Navigation
         </div>
         {navItems.map((item) => (
@@ -133,6 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
             key={item.id}
             onClick={() => onSelectTab(item.id)}
             className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+            title={item.label}
             style={{
               width: '100%',
               border: 'none',
@@ -140,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.75rem',
+              gap: '0.625rem',
             }}
           >
             {item.icon}

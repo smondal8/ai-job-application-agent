@@ -251,32 +251,32 @@ export const JobDatabaseView: React.FC = () => {
           {/* Filters Bar */}
           <div className="card" style={{ padding: '1rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ flex: 2, minWidth: '220px', position: 'relative' }}>
+              <div style={{ flex: '2 1 260px', position: 'relative' }}>
                 <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
                   placeholder="Search title, skills, keywords..."
                   value={searchKeyword}
                   onChange={(e) => setSearchKeyword(e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem 0.5rem 0.5rem 2.25rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
+                  style={{ width: '100%', padding: '0.55rem 0.75rem 0.55rem 2.25rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
                 />
               </div>
 
-              <div style={{ flex: 1, minWidth: '150px' }}>
+              <div style={{ flex: '1 1 180px' }}>
                 <input
                   type="text"
                   placeholder="Filter Company..."
                   value={selectedCompany}
                   onChange={(e) => setSelectedCompany(e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
                 />
               </div>
 
-              <div>
+              <div style={{ flex: '1 1 150px' }}>
                 <select
                   value={selectedWorkplace}
                   onChange={(e) => setSelectedWorkplace(e.target.value)}
-                  style={{ padding: '0.5rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
                 >
                   <option value="all">Workplace: All</option>
                   <option value="remote">Remote Only</option>
@@ -285,11 +285,11 @@ export const JobDatabaseView: React.FC = () => {
                 </select>
               </div>
 
-              <div>
+              <div style={{ flex: '1 1 150px' }}>
                 <select
                   value={selectedSeniority}
                   onChange={(e) => setSelectedSeniority(e.target.value)}
-                  style={{ padding: '0.5rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
                 >
                   <option value="all">Seniority: All</option>
                   <option value="senior">Senior</option>
@@ -300,6 +300,22 @@ export const JobDatabaseView: React.FC = () => {
                   <option value="entry">Entry-Level</option>
                 </select>
               </div>
+
+              {(searchKeyword || selectedCompany || selectedWorkplace !== 'all' || selectedSeniority !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSearchKeyword('');
+                    setSelectedCompany('');
+                    setSelectedWorkplace('all');
+                    setSelectedSeniority('all');
+                  }}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.8125rem', padding: '0.55rem 0.75rem', whiteSpace: 'nowrap' }}
+                >
+                  <X size={14} />
+                  <span>Reset</span>
+                </button>
+              )}
             </div>
           </div>
 
