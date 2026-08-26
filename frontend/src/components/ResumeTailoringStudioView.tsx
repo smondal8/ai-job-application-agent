@@ -514,38 +514,53 @@ export const ResumeTailoringStudioView: React.FC<ResumeTailoringStudioViewProps>
               <div
                 style={{
                   background: '#ffffff',
-                  color: '#0f172a',
-                  padding: '1.5rem',
                   borderRadius: '6px',
-                  maxHeight: '480px',
-                  overflowY: 'auto',
+                  border: '1px solid var(--border-color)',
+                  overflow: 'hidden',
+                  width: '100%',
                 }}
-                dangerouslySetInnerHTML={{ __html: tailoredResume.compiled_html || '' }}
-              />
+              >
+                <iframe
+                  srcDoc={tailoredResume.compiled_html || '<!DOCTYPE html><html><body><p style="padding:20px;color:#64748b;font-family:sans-serif;">No HTML document generated.</p></body></html>'}
+                  title="HTML Resume Preview"
+                  style={{
+                    width: '100%',
+                    height: '560px',
+                    border: 'none',
+                    backgroundColor: '#ffffff',
+                    display: 'block',
+                  }}
+                  sandbox="allow-same-origin"
+                />
+              </div>
             )}
 
             {/* TAB 5: Traceability Fact Matrix */}
             {activeDocTab === 'traceability' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                  Atomic fact attribution mapping for tailored resume ID #{tailoredResume.id}:
+                  Atomic fact attribution mapping for tailored resume ID #{tailoredResume.id} ({Object.keys(tailoredResume.traceability_matrix || {}).length} verified facts cited):
                 </div>
                 {tailoredResume.traceability_matrix && Object.keys(tailoredResume.traceability_matrix).length > 0 ? (
                   Object.entries(tailoredResume.traceability_matrix).map(([factId, claims], i) => (
                     <div key={i} style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
                         <code style={{ color: '#38bdf8', fontSize: '0.75rem', fontWeight: 600 }}>{factId}</code>
                         <span className="badge badge-gray" style={{ fontSize: '0.625rem' }}>{claims.length} claim(s)</span>
                       </div>
-                      <ul style={{ listStylePosition: 'inside', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                      <ul style={{ listStylePosition: 'inside', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.5, paddingLeft: '0.25rem' }}>
                         {claims.map((c, cIdx) => (
-                          <li key={cIdx}>{c}</li>
+                          <li key={cIdx} style={{ marginBottom: '2px' }}>{c}</li>
                         ))}
                       </ul>
                     </div>
                   ))
                 ) : (
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>No traceability matrix generated.</p>
+                  <div style={{ background: '#090d16', padding: '1.25rem', borderRadius: '6px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                      No atomic fact attributions mapped yet. Fact traceability is populated when claims reference verified candidate fact IDs (e.g., <code>exp:1:h0</code>, <code>skill:java</code>).
+                    </p>
+                  </div>
                 )}
               </div>
             )}

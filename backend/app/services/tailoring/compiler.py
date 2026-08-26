@@ -51,7 +51,7 @@ class ResumeDocumentCompiler:
         contact_html = ' <span class="bullet-sep">&bull;</span> '.join(contact_items)
 
         # 1. Summary Section
-        summary_obj = tailored_data.get("tailored_summary")
+        summary_obj = tailored_data.get("tailored_summary") or candidate_info.get("summary")
         summary_text = summary_obj.get("text", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
         summary_html = ""
         if summary_text and summary_text.strip() and summary_text.strip().lower() != "none":
@@ -63,10 +63,9 @@ class ResumeDocumentCompiler:
             """
 
         # 2. Skills Section
-        skills_items = tailored_data.get("highlighted_skills", [])
+        skills_items = tailored_data.get("highlighted_skills") or candidate_info.get("skills") or []
         skills_html = ""
         if skills_items:
-            # Group skills by category if available, otherwise render clean badges
             categories: Dict[str, List[str]] = {}
             flat_skills: List[str] = []
             for sk in skills_items:
@@ -98,7 +97,7 @@ class ResumeDocumentCompiler:
             """
 
         # 3. Experience Section
-        exp_list = tailored_data.get("tailored_experience", [])
+        exp_list = tailored_data.get("tailored_experience") or candidate_info.get("experiences") or []
         exp_html = ""
         if exp_list:
             exp_blocks = []
@@ -109,21 +108,24 @@ class ResumeDocumentCompiler:
                 start = html.escape(str(exp.get("start_date") or ""))
                 is_curr = exp.get("is_current")
                 end = "Present" if is_curr else html.escape(str(exp.get("end_date") or ""))
-                
+
                 date_str = f"{start} – {end}" if (start and end) else (start or end or "")
 
-                # Highlights
                 bullet_items = []
-                highlights = exp.get("tailored_highlights") or []
+                highlights = exp.get("tailored_highlights") or exp.get("highlights") or exp.get("bullets") or []
                 for h in highlights:
                     h_text = h.get("text", "") if isinstance(h, dict) else str(h)
                     if h_text and h_text.strip():
                         bullet_items.append(f'<li>{html.escape(h_text.strip())}</li>')
 
-                # Direct description if no highlights
                 desc_line = ""
                 if not bullet_items and exp.get("description"):
-                    desc_line = f'<p class="exp-desc">{html.escape(exp["description"])}</p>'
+                    d_text = str(exp["description"]).strip()
+                    d_lines = [l.strip().lstrip("•-* ").strip() for l in d_text.split("\n") if l.strip()]
+                    if len(d_lines) > 1:
+                        bullet_items = [f'<li>{html.escape(l)}</li>' for l in d_lines]
+                    else:
+                        desc_line = f'<p class="exp-desc">{html.escape(d_text)}</p>'
 
                 bullets_html = f'<ul class="exp-bullets">{"".join(bullet_items)}</ul>' if bullet_items else desc_line
 
@@ -265,7 +267,7 @@ class ResumeDocumentCompiler:
     padding-bottom: 12px;
     margin-bottom: 14px;
   }}
-  .header-name {{
+  .resume-header h1 {{
     font-size: 20pt;
     font-weight: 800;
     letter-spacing: -0.02em;
@@ -326,6 +328,7 @@ class ResumeDocumentCompiler:
     line-height: 1.5;
     color: #334155;
     text-align: justify;
+    word-break: break-word;
   }}
 
   /* Entry Blocks */
@@ -338,11 +341,15 @@ class ResumeDocumentCompiler:
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
     font-size: 10pt;
   }}
   .entry-title {{
     color: #0f172a;
     font-size: 10pt;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }}
   .entry-dates {{
     font-size: 9pt;
@@ -355,6 +362,8 @@ class ResumeDocumentCompiler:
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
     font-size: 9pt;
     margin-top: 1px;
     margin-bottom: 3px;
@@ -362,6 +371,7 @@ class ResumeDocumentCompiler:
   .entry-company {{
     font-weight: 600;
     color: #334155;
+    word-break: break-word;
   }}
   .entry-location {{
     color: #64748b;
@@ -379,6 +389,7 @@ class ResumeDocumentCompiler:
     color: #334155;
     line-height: 1.45;
     margin-top: 2px;
+    word-break: break-word;
   }}
   .exp-bullets {{
     margin: 3px 0 0 0;
@@ -390,6 +401,7 @@ class ResumeDocumentCompiler:
     line-height: 1.4;
     color: #334155;
     margin-bottom: 2.5px;
+    word-break: break-word;
   }}
 
   /* Skills */
@@ -400,30 +412,35 @@ class ResumeDocumentCompiler:
   }}
   .skill-category-row {{
     display: flex;
-    align-items: center;
-    gap: 8px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
     font-size: 9pt;
+    margin-bottom: 4px;
   }}
   .skill-category-label {{
     font-weight: 700;
     color: #1e293b;
-    min-width: 110px;
+    min-width: 120px;
     flex-shrink: 0;
   }}
   .skill-badges-wrap {{
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
+    flex: 1;
   }}
-  .skill-badge {{
+  .skill-tag, .skill-badge {{
     background-color: #f1f5f9;
     color: #0f172a;
     border: 1px solid #e2e8f0;
-    padding: 1px 6px;
-    border-radius: 3px;
+    padding: 2px 7px;
+    border-radius: 4px;
     font-size: 8.5pt;
     font-weight: 500;
     line-height: 1.3;
+    display: inline-block;
+    word-break: break-word;
   }}
 
   /* Academics */
@@ -484,7 +501,7 @@ class ResumeDocumentCompiler:
         location = candidate_info.get("location", "")
         linkedin = candidate_info.get("linkedin_url", "")
         github = candidate_info.get("github_url", "")
-        portfolio = candidate_info.get("portfolio_url", "")
+        portfolio = candidate_info.get("portfolio_url") or candidate_info.get("website", "")
 
         lines: List[str] = []
 
@@ -503,19 +520,19 @@ class ResumeDocumentCompiler:
         lines.append("\n---\n")
 
         # 2. Executive Summary
-        summary_obj = tailored_data.get("tailored_summary")
+        summary_obj = tailored_data.get("tailored_summary") or candidate_info.get("summary")
         summary_text = summary_obj.get("text", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
         summary_fids = summary_obj.get("source_fact_ids", []) if isinstance(summary_obj, dict) else []
 
         if summary_text and summary_text.strip() and summary_text.strip().lower() != "none":
             lines.append("## Professional Summary")
             if include_traceability_annotations and summary_fids:
-                lines.append(f"{summary_text} `[^facts: {', '.join(summary_fids)}]`\n")
+                lines.append(f"{summary_text.strip()} `[^facts: {', '.join(summary_fids)}]`\n")
             else:
-                lines.append(f"{summary_text}\n")
+                lines.append(f"{summary_text.strip()}\n")
 
         # 3. Skills
-        skills_items = tailored_data.get("highlighted_skills", [])
+        skills_items = tailored_data.get("highlighted_skills") or candidate_info.get("skills") or []
         if skills_items:
             lines.append("## Core Competencies & Technical Skills")
             skill_names = []
@@ -524,34 +541,47 @@ class ResumeDocumentCompiler:
                     skill_names.append(sk.get("name", ""))
                 elif isinstance(sk, str):
                     skill_names.append(sk)
-            clean_skills = [s for s in skill_names if s]
+            clean_skills = [s.strip() for s in skill_names if s and s.strip()]
             if clean_skills:
                 lines.append(", ".join(clean_skills) + "\n")
 
         # 4. Professional Experience
-        exp_list = tailored_data.get("tailored_experience", [])
+        exp_list = tailored_data.get("tailored_experience") or candidate_info.get("experiences") or []
         if exp_list:
             lines.append("## Professional Experience")
             for exp in exp_list:
                 comp = exp.get("company", "Company")
                 pos = exp.get("position", "Position")
+                loc = exp.get("location", "")
                 start = exp.get("start_date", "")
                 end = "Present" if exp.get("is_current") else exp.get("end_date", "")
-                date_str = f"{start} – {end}" if start else end
+                date_str = f"{start} – {end}" if (start and end) else (start or end or "")
+                loc_str = f" | {loc}" if loc else ""
 
-                lines.append(f"### {pos} | **{comp}** `({date_str})`")
+                lines.append(f"### {pos} | **{comp}**{loc_str} `({date_str})`")
 
-                highlights = exp.get("tailored_highlights", [])
+                highlights = exp.get("tailored_highlights") or exp.get("highlights") or exp.get("bullets") or []
+                bullet_lines = []
                 for h in highlights:
                     if isinstance(h, dict):
                         h_text = h.get("text", "")
                         h_fids = h.get("source_fact_ids", [])
-                        if include_traceability_annotations and h_fids:
-                            lines.append(f"- {h_text} `[^{', '.join(h_fids)}]`")
-                        else:
-                            lines.append(f"- {h_text}")
+                        if h_text and h_text.strip():
+                            if include_traceability_annotations and h_fids:
+                                bullet_lines.append(f"- {h_text.strip()} `[^{', '.join(h_fids)}]`")
+                            else:
+                                bullet_lines.append(f"- {h_text.strip()}")
                     elif isinstance(h, str) and h.strip():
-                        lines.append(f"- {h.strip()}")
+                        bullet_lines.append(f"- {h.strip()}")
+
+                if not bullet_lines and exp.get("description"):
+                    d_text = str(exp["description"]).strip()
+                    d_lines = [l.strip().lstrip("•-* ").strip() for l in d_text.split("\n") if l.strip()]
+                    for l in d_lines:
+                        bullet_lines.append(f"- {l}")
+
+                for bl in bullet_lines:
+                    lines.append(bl)
                 lines.append("")
 
         # 5. Education
@@ -561,7 +591,7 @@ class ResumeDocumentCompiler:
                 inst = edu.get("institution", "Institution")
                 deg = edu.get("degree", "Degree")
                 field = edu.get("field_of_study", "")
-                deg_full = f"{deg} in {field}" if field else deg
+                deg_full = f"{deg} in {field}" if (deg and field) else (deg or field or "Degree")
                 start = edu.get("start_date", "")
                 end = edu.get("end_date", "")
                 date_str = f" ({start} - {end})" if (start or end) else ""
@@ -604,37 +634,55 @@ class ResumeDocumentCompiler:
         ]
         if headline:
             lines.append(f"  {headline}")
-        
+
         contact_line = "  |  ".join(filter(None, [email, phone, location]))
         if contact_line:
             lines.append(f"  {contact_line}")
         lines.extend(["=" * 70, ""])
 
         # Summary
-        summary_obj = tailored_data.get("tailored_summary")
+        summary_obj = tailored_data.get("tailored_summary") or candidate_info.get("summary")
         summary_text = summary_obj.get("text", "") if isinstance(summary_obj, dict) else str(summary_obj or "")
         if summary_text and summary_text.strip() and summary_text.strip().lower() != "none":
             lines.extend(["PROFESSIONAL SUMMARY", "-" * 40, summary_text.strip(), ""])
 
         # Skills
-        skills = tailored_data.get("highlighted_skills", [])
+        skills = tailored_data.get("highlighted_skills") or candidate_info.get("skills") or []
         if skills:
             skill_names = [s.get("name", "") if isinstance(s, dict) else str(s) for s in skills]
-            lines.extend(["TECHNICAL SKILLS", "-" * 40, ", ".join(filter(None, skill_names)), ""])
+            clean_names = [s.strip() for s in skill_names if s and s.strip()]
+            if clean_names:
+                lines.extend(["TECHNICAL SKILLS", "-" * 40, ", ".join(clean_names), ""])
 
         # Experience
-        experiences = tailored_data.get("tailored_experience", [])
+        experiences = tailored_data.get("tailored_experience") or candidate_info.get("experiences") or []
         if experiences:
             lines.extend(["WORK EXPERIENCE", "-" * 40])
             for exp in experiences:
                 comp = exp.get("company", "Company")
                 pos = exp.get("position", "Position")
+                loc = exp.get("location", "")
                 start = exp.get("start_date", "")
                 end = "Present" if exp.get("is_current") else exp.get("end_date", "")
-                lines.append(f"{pos} -- {comp} ({start} to {end})")
-                for h in exp.get("tailored_highlights", []):
+                date_str = f"{start} to {end}" if (start and end) else (start or end or "")
+                loc_str = f" ({loc})" if loc else ""
+                lines.append(f"{pos} -- {comp}{loc_str} ({date_str})")
+
+                highlights = exp.get("tailored_highlights") or exp.get("highlights") or exp.get("bullets") or []
+                bullet_lines = []
+                for h in highlights:
                     h_text = h.get("text", "") if isinstance(h, dict) else str(h)
-                    lines.append(f"  * {h_text}")
+                    if h_text and h_text.strip():
+                        bullet_lines.append(f"  * {h_text.strip()}")
+
+                if not bullet_lines and exp.get("description"):
+                    d_text = str(exp["description"]).strip()
+                    d_lines = [l.strip().lstrip("•-* ").strip() for l in d_text.split("\n") if l.strip()]
+                    for l in d_lines:
+                        bullet_lines.append(f"  * {l}")
+
+                for bl in bullet_lines:
+                    lines.append(bl)
                 lines.append("")
 
         # Education
@@ -644,8 +692,11 @@ class ResumeDocumentCompiler:
                 inst = edu.get("institution", "")
                 deg = edu.get("degree", "")
                 field = edu.get("field_of_study", "")
-                full = f"{deg} in {field}" if field else deg
-                lines.append(f"{full} -- {inst}")
+                full = f"{deg} in {field}" if (deg and field) else (deg or field or "Degree")
+                start = edu.get("start_date", "")
+                end = edu.get("end_date", "")
+                date_str = f" ({start} to {end})" if (start or end) else ""
+                lines.append(f"{full} -- {inst}{date_str}")
             lines.append("")
 
         # Projects
@@ -656,7 +707,8 @@ class ResumeDocumentCompiler:
                 p_desc = p.get("description", "")
                 lines.append(f"{p_name}: {p_desc}")
                 for h in p.get("highlights", []):
-                    lines.append(f"  * {h}")
+                    if h:
+                        lines.append(f"  * {h}")
             lines.append("")
 
         return "\n".join(lines)

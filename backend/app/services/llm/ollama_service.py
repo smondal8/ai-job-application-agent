@@ -169,42 +169,80 @@ class OllamaLLMService:
         fallback_default: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Generate and robustly parse structured JSON from local Ollama model."""
-        llm_res = await self.generate(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            format_json=True,
-        )
+        def _try_parse(raw_text: str) -> Optional[Dict[str, Any]]:
+            if not raw_text or not raw_text.strip():
+                return None
+            # Strip think tags if model emitted reasoning tokens
+            cleaned = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
 
-        text = llm_res.text.strip()
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            # Fallback 1: Extract json between ```json ... ``` code blocks
-            match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+            # 1. Direct JSON parse
+            try:
+                data = json.loads(cleaned)
+                if isinstance(data, dict):
+                    # If Ollama returned its internal error envelope (e.g. {"error": "..."}) without schema keys
+                    if "error" in data and len(data) == 1:
+                        return None
+                    return data
+            except json.JSONDecodeError:
+                pass
+
+            # 2. Extract JSON between ```json ... ``` code blocks
+            match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.DOTALL)
             if match:
                 try:
-                    return json.loads(match.group(1))
+                    data = json.loads(match.group(1))
+                    if isinstance(data, dict) and not ("error" in data and len(data) == 1):
+                        return data
                 except json.JSONDecodeError:
                     pass
 
-            # Fallback 2: Extract between first { and last }
-            first_brace = text.find("{")
-            last_brace = text.rfind("}")
+            # 3. Extract between first { and last }
+            first_brace = cleaned.find("{")
+            last_brace = cleaned.rfind("}")
             if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
                 try:
-                    return json.loads(text[first_brace : last_brace + 1])
+                    data = json.loads(cleaned[first_brace : last_brace + 1])
+                    if isinstance(data, dict) and not ("error" in data and len(data) == 1):
+                        return data
                 except json.JSONDecodeError:
                     pass
+            return None
 
-            logger.warning("Failed to parse JSON from Ollama output. Raw: %s", text[:200])
-            if fallback_default is not None:
-                return fallback_default
-            raise AppError(
-                "Local LLM returned invalid JSON structure.",
-                status_code=502,
-                code="LLM_INVALID_JSON",
-                details={"raw_response": text[:500]},
+        # Attempt 1: with format_json=True
+        try:
+            llm_res = await self.generate(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                format_json=True,
             )
+            parsed = _try_parse(llm_res.text.strip())
+            if parsed is not None:
+                return parsed
+        except Exception as exc:
+            logger.warning("Ollama format_json=True generation attempt encountered: %s", exc)
+
+        # Attempt 2: without format_json constraint (allows thinking models to think and emit JSON blocks)
+        try:
+            retry_prompt = prompt + "\n\nIMPORTANT: Return ONLY a valid JSON object matching the schema inside a ```json { ... } ``` code block."
+            retry_res = await self.generate(
+                prompt=retry_prompt,
+                system_prompt=system_prompt,
+                format_json=False,
+            )
+            parsed = _try_parse(retry_res.text.strip())
+            if parsed is not None:
+                return parsed
+        except Exception as exc:
+            logger.warning("Ollama unconstrained generation attempt encountered: %s", exc)
+
+        logger.warning("Failed to parse valid structured JSON from Ollama. Using fallback if available.")
+        if fallback_default is not None:
+            return fallback_default
+        raise AppError(
+            "Local LLM returned invalid JSON structure.",
+            status_code=502,
+            code="LLM_INVALID_JSON",
+        )
 
 
 ollama_service = OllamaLLMService()

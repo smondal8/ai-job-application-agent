@@ -120,15 +120,33 @@ class ResumeTailoringService:
             exp_id = exp.get("id", "1")
             company_name = exp.get("company", "Company")
             pos = exp.get("position", "Engineer")
+            loc = exp.get("location")
             h_objs = []
-            for h_idx, h in enumerate(exp.get("highlights", [])):
+
+            raw_hl = exp.get("highlights") or []
+            if not raw_hl and exp.get("description"):
+                desc_text = str(exp["description"]).strip()
+                desc_lines = [line.strip().lstrip("•-* ").strip() for line in desc_text.split("\n") if line.strip()]
+                raw_hl = desc_lines if desc_lines else [desc_text]
+
+            for h_idx, h in enumerate(raw_hl):
+                h_text = h.get("text", "") if isinstance(h, dict) else str(h)
+                if h_text and h_text.strip():
+                    h_objs.append({
+                        "text": h_text.strip(),
+                        "source_fact_ids": [f"exp:{exp_id}:h{h_idx}"],
+                    })
+
+            if not h_objs:
                 h_objs.append({
-                    "text": h,
-                    "source_fact_ids": [f"exp:{exp_id}:h{h_idx}"],
+                    "text": f"Served as {pos} at {company_name}.",
+                    "source_fact_ids": [f"exp:{exp_id}"],
                 })
+
             fallback_highlights.append({
                 "company": company_name,
                 "position": pos,
+                "location": loc,
                 "start_date": exp.get("start_date", ""),
                 "end_date": exp.get("end_date"),
                 "is_current": exp.get("is_current", False),
@@ -136,18 +154,33 @@ class ResumeTailoringService:
             })
 
         fallback_skills = []
-        for sk in ground_truth.get("skills", [])[:8]:
+        matched_set = set(analysis_dict.get("matched_skills", []))
+        all_skills = ground_truth.get("skills", [])
+        sorted_skills = sorted(
+            all_skills,
+            key=lambda s: 0 if s.get("name", "") in matched_set else 1
+        )
+        for sk in sorted_skills[:15]:
             sk_name = sk.get("name", "")
             sk_id = sk.get("id") or sk_name.lower().replace(" ", "_")
             fallback_skills.append({
                 "name": sk_name,
+                "category": sk.get("category"),
                 "source_fact_ids": [f"skill:{sk_id}"],
             })
 
+        cand_summary = profile.summary or ground_truth.get("candidate", {}).get("summary") or ""
+        summary_text_val = (
+            cand_summary.strip()
+            if cand_summary.strip()
+            else f"{profile.headline or 'Experienced Professional'} with proven background aligned with {job.title} at {job.company}."
+        )
+        summary_fids = [f"profile:{profile.id}:summary"] if cand_summary.strip() else [f"profile:{profile.id}:headline"]
+
         fallback_tailored: Dict[str, Any] = {
             "tailored_summary": {
-                "text": f"{profile.headline or 'Experienced Professional'} with proven background aligned with {job.title} at {job.company}.",
-                "source_fact_ids": [f"profile:{profile.id}:headline"],
+                "text": summary_text_val,
+                "source_fact_ids": summary_fids,
             },
             "tailored_experience": fallback_highlights,
             "highlighted_skills": fallback_skills,
@@ -160,7 +193,7 @@ class ResumeTailoringService:
                 {
                     "paragraph_type": "body_skills",
                     "text": f"My technical background and verified accomplishments directly align with your requirements.",
-                    "source_fact_ids": [s["source_fact_ids"][0] for s in fallback_skills[:3]],
+                    "source_fact_ids": [s["source_fact_ids"][0] for s in fallback_skills[:3]] if fallback_skills else [f"profile:{profile.id}:headline"],
                 },
                 {
                     "paragraph_type": "closing",
@@ -176,6 +209,85 @@ class ResumeTailoringService:
             system_prompt=system_prompt,
             fallback_default=fallback_tailored,
         )
+
+        # Normalize LLM structured response keys
+        if not isinstance(raw_llm_json, dict):
+            raw_llm_json = fallback_tailored
+
+        if "summary" in raw_llm_json and "tailored_summary" not in raw_llm_json:
+            raw_llm_json["tailored_summary"] = raw_llm_json["summary"]
+        if "experience" in raw_llm_json and "tailored_experience" not in raw_llm_json:
+            raw_llm_json["tailored_experience"] = raw_llm_json["experience"]
+        if "work_experience" in raw_llm_json and "tailored_experience" not in raw_llm_json:
+            raw_llm_json["tailored_experience"] = raw_llm_json["work_experience"]
+        if "skills" in raw_llm_json and "highlighted_skills" not in raw_llm_json:
+            raw_llm_json["highlighted_skills"] = raw_llm_json["skills"]
+        if "technical_skills" in raw_llm_json and "highlighted_skills" not in raw_llm_json:
+            raw_llm_json["highlighted_skills"] = raw_llm_json["technical_skills"]
+
+        # Ensure tailored_experience is not empty and each experience has highlights
+        if not raw_llm_json.get("tailored_experience"):
+            raw_llm_json["tailored_experience"] = fallback_highlights
+        else:
+            normalized_exp = []
+            for item in raw_llm_json["tailored_experience"]:
+                if not isinstance(item, dict):
+                    continue
+                c_name = item.get("company") or item.get("company_name") or "Company"
+                pos = item.get("position") or item.get("role") or item.get("title") or "Position"
+                st = item.get("start_date") or ""
+                ed = item.get("end_date")
+                is_curr = item.get("is_current", False)
+                loc = item.get("location")
+
+                hl_list = item.get("tailored_highlights") or item.get("highlights") or item.get("bullets") or item.get("bullet_points") or []
+                hl_normalized = []
+                for h_idx, h in enumerate(hl_list):
+                    if isinstance(h, dict):
+                        h_text = h.get("text", "")
+                        h_fids = h.get("source_fact_ids") or []
+                        if h_text and h_text.strip():
+                            hl_normalized.append({"text": h_text.strip(), "source_fact_ids": h_fids})
+                    elif isinstance(h, str) and h.strip():
+                        hl_normalized.append({"text": h.strip(), "source_fact_ids": []})
+
+                if not hl_normalized and item.get("description"):
+                    hl_normalized.append({"text": str(item["description"]).strip(), "source_fact_ids": []})
+
+                normalized_exp.append({
+                    "company": c_name,
+                    "position": pos,
+                    "location": loc,
+                    "start_date": st,
+                    "end_date": ed,
+                    "is_current": is_curr,
+                    "tailored_highlights": hl_normalized,
+                })
+            raw_llm_json["tailored_experience"] = normalized_exp if normalized_exp else fallback_highlights
+
+        # Ensure highlighted_skills is not empty
+        if not raw_llm_json.get("highlighted_skills"):
+            raw_llm_json["highlighted_skills"] = fallback_skills
+        else:
+            normalized_skills = []
+            for sk in raw_llm_json["highlighted_skills"]:
+                if isinstance(sk, dict):
+                    s_name = sk.get("name", "")
+                    s_fids = sk.get("source_fact_ids") or []
+                    s_cat = sk.get("category")
+                    if s_name and s_name.strip():
+                        normalized_skills.append({"name": s_name.strip(), "category": s_cat, "source_fact_ids": s_fids})
+                elif isinstance(sk, str) and sk.strip():
+                    normalized_skills.append({"name": sk.strip(), "source_fact_ids": [f"skill:{sk.strip().lower().replace(' ', '_')}"]})
+            raw_llm_json["highlighted_skills"] = normalized_skills if normalized_skills else fallback_skills
+
+        # Ensure tailored_summary is not empty
+        if not raw_llm_json.get("tailored_summary"):
+            raw_llm_json["tailored_summary"] = fallback_tailored["tailored_summary"]
+
+        # Ensure cover_letter_paragraphs is populated
+        if not raw_llm_json.get("cover_letter_paragraphs"):
+            raw_llm_json["cover_letter_paragraphs"] = fallback_tailored["cover_letter_paragraphs"]
 
         # 7. Traceability Validation
         validation_result = self.validator.validate(
