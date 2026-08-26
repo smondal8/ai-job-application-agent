@@ -12,6 +12,11 @@ from app.services.preparation.preparation_engine import (
     BrowserPreparationEngine,
     browser_preparation_engine,
 )
+from app.services.preparation.browser_session_manager import (
+    BrowserSessionManager,
+    browser_session_manager,
+    ActiveBrowserSession,
+)
 
 __all__ = [
     "BasePortalPreparationAdapter",
@@ -22,4 +27,7 @@ __all__ = [
     "preparation_adapter_registry",
     "BrowserPreparationEngine",
     "browser_preparation_engine",
+    "BrowserSessionManager",
+    "browser_session_manager",
+    "ActiveBrowserSession",
 ]

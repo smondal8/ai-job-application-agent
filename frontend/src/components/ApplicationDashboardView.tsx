@@ -75,6 +75,10 @@ export const ApplicationDashboardView: React.FC = () => {
   // Phase 9 Playwright Browser Staging State
   const [latestPrepRun, setLatestPrepRun] = useState<BrowserPreparationRun | null>(null);
   const [isRunningStaging, setIsRunningStaging] = useState<boolean>(false);
+  const [isResumingVerification, setIsResumingVerification] = useState<boolean>(false);
+  const [isOpeningBrowser, setIsOpeningBrowser] = useState<boolean>(false);
+  const [browserStatusMsg, setBrowserStatusMsg] = useState<string | null>(null);
+  const [sessionUnavailable, setSessionUnavailable] = useState<boolean>(false);
   const [customPortalUrl, setCustomPortalUrl] = useState<string>('');
   const [stagingError, setStagingError] = useState<string | null>(null);
 
@@ -147,6 +151,12 @@ export const ApplicationDashboardView: React.FC = () => {
       console.error('Failed to load application dossier:', err);
     } finally {
       setLoadingDossier(false);
+      setTimeout(() => {
+        const el = document.getElementById('selected-application-details');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 100);
     }
   };
 
@@ -219,6 +229,42 @@ export const ApplicationDashboardView: React.FC = () => {
       setStagingError(err.message || 'Browser preparation failed.');
     } finally {
       setIsRunningStaging(false);
+    }
+  };
+
+  const handleOpenOrFocusBrowser = async () => {
+    if (!dossier) return;
+    setIsOpeningBrowser(true);
+    setBrowserStatusMsg(null);
+    try {
+      const res = await api.openOrFocusBrowserSession(dossier.application.id);
+
+      if (res.session_active) {
+        setSessionUnavailable(false);
+        setBrowserStatusMsg(res.message || 'Application browser session active on desktop.');
+      } else {
+        setSessionUnavailable(true);
+        setBrowserStatusMsg(res.message || 'Browser session unavailable. A new browser preparation session is required.');
+      }
+    } catch (err: any) {
+      setSessionUnavailable(true);
+      setBrowserStatusMsg(`Failed to reach browser session: ${err.message}`);
+    } finally {
+      setIsOpeningBrowser(false);
+    }
+  };
+
+  const handleContinueAfterVerification = async () => {
+    if (!dossier) return;
+    setIsResumingVerification(true);
+    try {
+      await api.continueAfterVerification(dossier.application.id);
+      await loadDossier(dossier.application.id);
+      await fetchApplicationsAndStats();
+    } catch (err: any) {
+      alert(`Failed to resume application: ${err.message}`);
+    } finally {
+      setIsResumingVerification(false);
     }
   };
 
@@ -416,7 +462,7 @@ export const ApplicationDashboardView: React.FC = () => {
       <div className="card" style={{ padding: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-            {['all', 'approved', 'ready_for_review', 'in_review', 'staged_for_preparation', 'requires_reapproval', 'draft', 'rejected'].map((st) => (
+            {['all', 'approved', 'ready_for_review', 'in_review', 'staged_for_preparation', 'action_required', 'requires_reapproval', 'draft', 'rejected'].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
@@ -459,71 +505,75 @@ export const ApplicationDashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Table + Dossier Split Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: selectedAppId ? 'repeat(auto-fit, minmax(460px, 1fr))' : '1fr', gap: '1.5rem', alignItems: 'start' }}>
-        {/* Applications Catalog Table */}
-        <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
-          <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '0.9375rem', fontWeight: 700 }}>
-              Job Applications ({applications.length})
-            </h3>
-            {loading && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Loading...</span>}
+      {/* Main Applications Workspace (Vertically Stacked Full-Width Flow) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+        {/* Applications Catalog List (Full Width) */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden', width: '100%' }}>
+          <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Briefcase size={18} color="#38bdf8" />
+              <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>
+                Application Portfolio & Staging Ledger
+              </h3>
+              <span className="badge badge-gray">{applications.length}</span>
+            </div>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table className="data-table">
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
               <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Target Position & Company</th>
-                  <th>Portal</th>
-                  <th>Match Score</th>
-                  <th>Status</th>
-                  <th>Security Gate</th>
-                  <th>Action</th>
+                <tr style={{ background: '#090d16', textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
+                  <th style={{ padding: '0.75rem 1rem', width: '32%', minWidth: '200px' }}>Job & Company</th>
+                  <th style={{ padding: '0.75rem 0.75rem', width: '12%', minWidth: '100px' }}>Portal</th>
+                  <th style={{ padding: '0.75rem 0.75rem', width: '15%', minWidth: '130px' }}>Match Fit</th>
+                  <th style={{ padding: '0.75rem 0.75rem', width: '18%', minWidth: '140px' }}>Status</th>
+                  <th style={{ padding: '0.75rem 0.75rem', width: '13%', minWidth: '110px' }}>Approval</th>
+                  <th style={{ padding: '0.75rem 1rem', width: '10%', minWidth: '90px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {applications.length === 0 ? (
+                {loading ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                      No applications found matching the selected filters.
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                      Loading applications ledger...
+                    </td>
+                  </tr>
+                ) : applications.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                      No applications found matching criteria. Click "+ New Application" to stage one.
                     </td>
                   </tr>
                 ) : (
                   applications.map((app) => {
                     const isSelected = selectedAppId === app.id;
-                    const isApproved = app.status === 'approved' || app.status === 'staged_for_preparation';
+                    const isApproved = !!app.approval_token && app.status !== 'requires_reapproval';
                     return (
                       <tr
                         key={app.id}
                         onClick={() => loadDossier(app.id)}
                         style={{
                           cursor: 'pointer',
-                          backgroundColor: isSelected ? 'rgba(56, 189, 248, 0.1)' : 'transparent',
+                          background: isSelected ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                          borderBottom: '1px solid var(--border-color)',
                         }}
                       >
-                        <td>
-                          <code style={{ color: '#38bdf8' }}>#{app.id}</code>
-                        </td>
-                        <td>
-                          <div>
-                            <strong style={{ color: '#f8fafc', fontSize: '0.8125rem' }}>{app.job_title}</strong>
-                            <div style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>
-                              {app.job_company} &bull; {app.job_remote_type}
-                            </div>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ fontWeight: 600, color: '#f8fafc', wordBreak: 'break-word' }}>{app.job_title}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.2rem', wordBreak: 'break-word' }}>
+                            {app.job_company} &bull; {app.job_location || 'Remote'}
                           </div>
                         </td>
-                        <td>
-                          <span className="badge badge-gray" style={{ textTransform: 'uppercase', fontSize: '0.625rem' }}>
+                        <td style={{ padding: '0.75rem 0.75rem', verticalAlign: 'middle' }}>
+                          <span className="badge badge-gray" style={{ fontSize: '0.6875rem', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                             {app.portal_type}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ padding: '0.75rem 0.75rem', verticalAlign: 'middle' }}>
                           {app.fit_score !== null && app.fit_score !== undefined ? (
                             <span
                               className={`badge ${app.fit_score >= 80 ? 'badge-green' : app.fit_score >= 60 ? 'badge-purple' : 'badge-blue'}`}
-                              style={{ fontSize: '0.6875rem' }}
+                              style={{ fontSize: '0.6875rem', whiteSpace: 'nowrap' }}
                             >
                               {app.fit_score}% {app.recommendation || ''}
                             </span>
@@ -531,48 +581,55 @@ export const ApplicationDashboardView: React.FC = () => {
                             <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>N/A</span>
                           )}
                         </td>
-                        <td>
+                        <td style={{ padding: '0.75rem 0.75rem', verticalAlign: 'middle' }}>
                           <span
                             className={`badge ${
                               app.status === 'approved' || app.status === 'staged_for_preparation'
                                 ? 'badge-green'
                                 : app.status === 'ready_for_review'
                                 ? 'badge-blue'
+                                : app.status === 'action_required'
+                                ? 'badge-yellow'
                                 : app.status === 'requires_reapproval'
                                 ? 'badge-purple'
                                 : 'badge-gray'
                             }`}
-                            style={{ fontSize: '0.6875rem', textTransform: 'uppercase' }}
+                            style={{ fontSize: '0.6875rem', textTransform: 'uppercase', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}
                           >
                             {app.status.replace(/_/g, ' ')}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ padding: '0.75rem 0.75rem', verticalAlign: 'middle' }}>
                           {isApproved ? (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#34d399', fontSize: '0.6875rem' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#34d399', fontSize: '0.6875rem', whiteSpace: 'nowrap' }}>
                               <Lock size={12} />
                               <span>Approved</span>
                             </span>
+                          ) : app.status === 'action_required' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', fontSize: '0.6875rem', whiteSpace: 'nowrap' }}>
+                              <AlertTriangle size={12} />
+                              <span>Action Req.</span>
+                            </span>
                           ) : app.status === 'requires_reapproval' ? (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', fontSize: '0.6875rem' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#fbbf24', fontSize: '0.6875rem', whiteSpace: 'nowrap' }}>
                               <AlertTriangle size={12} />
                               <span>Invalidated</span>
                             </span>
                           ) : (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.6875rem' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-muted)', fontSize: '0.6875rem', whiteSpace: 'nowrap' }}>
                               <Unlock size={12} />
                               <span>Unapproved</span>
                             </span>
                           )}
                         </td>
-                        <td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', verticalAlign: 'middle' }}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               loadDossier(app.id);
                             }}
                             className="btn btn-secondary"
-                            style={{ fontSize: '0.6875rem', padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                            style={{ fontSize: '0.6875rem', padding: '0.25rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
                           >
                             <Eye size={12} />
                             <span>Staging</span>
@@ -587,40 +644,224 @@ export const ApplicationDashboardView: React.FC = () => {
           </div>
         </div>
 
-        {/* Selected Application Dossier Drawer */}
+        {/* Selected Application Details Panel (Full Width below Ledger) */}
         {selectedAppId && (
-          <div className="card" style={{ borderTop: '4px solid #38bdf8', padding: '1.25rem', position: 'sticky', top: '1rem' }}>
+          <div id="selected-application-details" className="card" style={{ borderTop: '4px solid #38bdf8', padding: '1.5rem', width: '100%' }}>
             {loadingDossier ? (
               <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                 Loading Application Dossier & Staging Status...
               </div>
             ) : dossier ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
                 {/* Dossier Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.875rem' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: 700 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
                         {dossier.job.title}
                       </h3>
                       <span className="badge badge-blue">App #{dossier.application.id}</span>
+                      <span
+                        className={`badge ${
+                          dossier.application.status === 'approved' || dossier.application.status === 'staged_for_preparation'
+                            ? 'badge-green'
+                            : dossier.application.status === 'ready_for_review'
+                            ? 'badge-blue'
+                            : dossier.application.status === 'action_required'
+                            ? 'badge-yellow'
+                            : dossier.application.status === 'requires_reapproval'
+                            ? 'badge-purple'
+                            : 'badge-gray'
+                        }`}
+                        style={{ textTransform: 'uppercase' }}
+                      >
+                        {dossier.application.status.replace(/_/g, ' ')}
+                      </span>
                     </div>
-                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Building size={14} />
-                      <span>{dossier.job.company}</span>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Building size={14} />
+                        <strong>{dossier.job.company}</strong>
+                      </span>
                       <span>&bull;</span>
-                      <MapPin size={14} />
-                      <span>{dossier.job.location || 'Remote'} ({dossier.job.remote_type})</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <MapPin size={14} />
+                        <span>{dossier.job.location || 'Remote'} ({dossier.job.remote_type})</span>
+                      </span>
                     </div>
                   </div>
 
                   <button
                     onClick={() => setSelectedAppId(null)}
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                    title="Close Application Details"
                   >
-                    <X size={18} />
+                    <X size={14} />
+                    <span>Close Details</span>
                   </button>
                 </div>
+
+                {/* CAPTCHA / Browser Challenge Human Handoff Alert */}
+                {(dossier.application.status === 'action_required' || latestPrepRun?.status === 'blocked_by_captcha' || latestPrepRun?.captcha_detected) && (
+                  <div
+                    style={{
+                      background: 'rgba(251, 191, 36, 0.12)',
+                      border: '1px solid rgba(251, 191, 36, 0.4)',
+                      borderRadius: '8px',
+                      padding: '1.25rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.875rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <AlertTriangle size={20} color="#fbbf24" />
+                        <strong style={{ fontSize: '0.9375rem', color: '#fbbf24' }}>
+                          Browser Verification Required (Human Handoff)
+                        </strong>
+                      </div>
+                      <span className="badge badge-yellow">AUTOMATION PAUSED</span>
+                    </div>
+
+                    <p style={{ fontSize: '0.8125rem', color: '#f8fafc', lineHeight: 1.5 }}>
+                      Automation has paused safely because the job portal requires human verification (e.g. CAPTCHA, bot check, or login challenge). Anti-bot protection is never bypassed automatically.
+                    </p>
+
+                    {/* Step-by-Step Instructions */}
+                    <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.75rem' }}>
+                      <div style={{ color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem', fontSize: '0.6875rem' }}>
+                        Required Steps for Completion:
+                      </div>
+                      <ol style={{ paddingLeft: '1.25rem', margin: 0, color: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <li>Click <strong>Open / Focus Application Browser</strong> to access the exact active application portal.</li>
+                        <li>Complete the CAPTCHA / bot verification manually on the page.</li>
+                        <li>Return to this dashboard.</li>
+                        <li>Click <strong>Continue After Verification</strong> to resume workflow staging.</li>
+                      </ol>
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', background: '#090d16', padding: '0.625rem', borderRadius: '6px', fontSize: '0.75rem' }}>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Company: </span>
+                        <strong style={{ color: '#f8fafc' }}>{dossier.job.company}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Job Title: </span>
+                        <strong style={{ color: '#38bdf8' }}>{dossier.job.title}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Application ID: </span>
+                        <code>#{dossier.application.id}</code> (Job #{dossier.job.id})
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Status: </span>
+                        <span className="badge badge-yellow" style={{ fontSize: '0.625rem' }}>ACTION_REQUIRED</span>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Challenge Type: </span>
+                        <span style={{ color: '#fbbf24', fontWeight: 600 }}>
+                          {latestPrepRun?.captcha_detected ? 'CAPTCHA / Bot Protection' : 'Browser Challenge / Auth Wall'}
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Detected: </span>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {latestPrepRun?.created_at ? new Date(latestPrepRun.created_at).toLocaleTimeString() : 'Recently detected'}
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Tailored Resume: </span>
+                        <span style={{ color: '#c084fc' }}>Resume #{dossier.tailored_resume?.id || 'None'} (Preserved)</span>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--text-muted)' }}>Approval Binding: </span>
+                        <span style={{ color: '#34d399', fontWeight: 600 }}>Valid (Hashes Intact)</span>
+                      </div>
+                    </div>
+
+                    {/* Browser Status Feedback if present */}
+                    {browserStatusMsg && (
+                      <div
+                        style={{
+                          background: sessionUnavailable ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.12)',
+                          border: `1px solid ${sessionUnavailable ? 'rgba(239, 68, 68, 0.4)' : 'rgba(56, 189, 248, 0.3)'}`,
+                          borderRadius: '6px',
+                          padding: '0.5rem 0.75rem',
+                          fontSize: '0.75rem',
+                          color: sessionUnavailable ? '#fca5a5' : '#38bdf8',
+                        }}
+                      >
+                        {browserStatusMsg}
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.625rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => handleOpenOrFocusBrowser()}
+                        disabled={isOpeningBrowser}
+                        className="btn btn-secondary"
+                        style={{
+                          borderColor: '#38bdf8',
+                          color: '#38bdf8',
+                          fontWeight: 600,
+                          fontSize: '0.8125rem',
+                          padding: '0.4rem 0.85rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                        }}
+                      >
+                        <Globe size={14} />
+                        <span>{isOpeningBrowser ? 'Connecting...' : 'Open / Focus Application Browser'}</span>
+                      </button>
+
+                      {sessionUnavailable && (
+                        <button
+                          onClick={() => handleOpenOrFocusBrowser()}
+                          disabled={isOpeningBrowser}
+                          className="btn btn-secondary"
+                          style={{
+                            borderColor: '#fbbf24',
+                            color: '#fbbf24',
+                            fontWeight: 600,
+                            fontSize: '0.8125rem',
+                            padding: '0.4rem 0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                          }}
+                        >
+                          <RefreshCw size={14} />
+                          <span>Start New Browser Session</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={handleContinueAfterVerification}
+                        disabled={isResumingVerification}
+                        className="btn btn-primary"
+                        style={{
+                          background: '#d97706',
+                          borderColor: '#b45309',
+                          color: '#ffffff',
+                          fontWeight: 600,
+                          fontSize: '0.8125rem',
+                          padding: '0.4rem 0.85rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                        }}
+                      >
+                        <Play size={14} />
+                        <span>{isResumingVerification ? 'Resuming...' : 'Continue After Verification'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Dossier Sub-Tabs */}
                 <div style={{ display: 'flex', gap: '0.375rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
@@ -1094,13 +1335,20 @@ export const ApplicationDashboardView: React.FC = () => {
                     {dossier.tailored_resume ? (
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                             <button
                               onClick={() => setDocFormat('markdown')}
                               className={`btn ${docFormat === 'markdown' ? 'btn-primary' : 'btn-secondary'}`}
                               style={{ fontSize: '0.6875rem', padding: '0.2rem 0.5rem' }}
                             >
-                              Markdown
+                              ATS Markdown
+                            </button>
+                            <button
+                              onClick={() => setDocFormat('html')}
+                              className={`btn ${docFormat === 'html' ? 'btn-primary' : 'btn-secondary'}`}
+                              style={{ fontSize: '0.6875rem', padding: '0.2rem 0.5rem' }}
+                            >
+                              HTML Resume
                             </button>
                             <button
                               onClick={() => setDocFormat('cover_letter')}
@@ -1114,7 +1362,7 @@ export const ApplicationDashboardView: React.FC = () => {
                               className={`btn ${docFormat === 'text' ? 'btn-primary' : 'btn-secondary'}`}
                               style={{ fontSize: '0.6875rem', padding: '0.2rem 0.5rem' }}
                             >
-                              Text
+                              Plain Text
                             </button>
                             <button
                               onClick={() => setDocFormat('traceability')}
@@ -1128,7 +1376,13 @@ export const ApplicationDashboardView: React.FC = () => {
                           <div style={{ display: 'flex', gap: '0.25rem' }}>
                             <button
                               onClick={() => {
-                                const text = docFormat === 'cover_letter' ? dossier.tailored_resume?.cover_letter : dossier.tailored_resume?.compiled_markdown;
+                                const text = docFormat === 'cover_letter'
+                                  ? dossier.tailored_resume?.cover_letter
+                                  : docFormat === 'text'
+                                  ? dossier.tailored_resume?.compiled_text
+                                  : docFormat === 'html'
+                                  ? dossier.tailored_resume?.compiled_html
+                                  : dossier.tailored_resume?.compiled_markdown;
                                 handleCopy(text || '', 'dossier_doc');
                               }}
                               className="btn btn-secondary"
@@ -1141,17 +1395,41 @@ export const ApplicationDashboardView: React.FC = () => {
                         </div>
 
                         {docFormat === 'markdown' && (
-                          <pre className="code-block" style={{ maxHeight: '300px', fontSize: '0.75rem', lineHeight: 1.4 }}>
+                          <pre className="code-block" style={{ maxHeight: '380px', fontSize: '0.75rem', lineHeight: 1.4 }}>
                             {dossier.tailored_resume.compiled_markdown}
                           </pre>
                         )}
+                        {docFormat === 'html' && (
+                          <div
+                            style={{
+                              background: '#ffffff',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-color)',
+                              overflow: 'hidden',
+                              width: '100%',
+                            }}
+                          >
+                            <iframe
+                              srcDoc={dossier.tailored_resume.compiled_html || '<!DOCTYPE html><html><body><p style="padding:20px;color:#64748b;font-family:sans-serif;">No HTML document generated.</p></body></html>'}
+                              title="Approved HTML Resume Preview"
+                              style={{
+                                width: '100%',
+                                height: '480px',
+                                border: 'none',
+                                backgroundColor: '#ffffff',
+                                display: 'block',
+                              }}
+                              sandbox="allow-same-origin"
+                            />
+                          </div>
+                        )}
                         {docFormat === 'cover_letter' && (
-                          <div style={{ background: '#090d16', padding: '1rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.75rem', lineHeight: 1.6, maxHeight: '300px', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                          <div style={{ background: '#090d16', padding: '1rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.75rem', lineHeight: 1.6, maxHeight: '380px', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
                             {dossier.tailored_resume.cover_letter}
                           </div>
                         )}
                         {docFormat === 'text' && (
-                          <pre className="code-block" style={{ maxHeight: '300px', fontSize: '0.6875rem', lineHeight: 1.3 }}>
+                          <pre className="code-block" style={{ maxHeight: '380px', fontSize: '0.6875rem', lineHeight: 1.3 }}>
                             {dossier.tailored_resume.compiled_text}
                           </pre>
                         )}

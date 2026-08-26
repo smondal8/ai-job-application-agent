@@ -213,3 +213,67 @@ def test_list_applications_and_stats(db_session: Session, setup_application_data
     assert stats["status_counts"]["draft"] >= 1
     assert stats["status_counts"]["ready_for_review"] >= 1
     assert "greenhouse" in stats["portal_counts"]
+
+
+def test_application_dossier_html_resume_integrity(db_session: Session, setup_application_data: dict):
+    """Proves that Application Dossier returns the exact compiled HTML resume without re-running LLM or altering hashes."""
+    job = setup_application_data["job"]
+    resume = setup_application_data["resume"]
+
+    app_entity = application_service.create_application(
+        db=db_session,
+        job_id=job.id,
+        tailored_resume_id=resume.id,
+        status="ready_for_review",
+    )
+
+    dossier = application_service.get_application_dossier(db=db_session, application_id=app_entity.id)
+    assert dossier["tailored_resume"] is not None
+    assert dossier["tailored_resume"]["id"] == resume.id
+    assert dossier["tailored_resume"]["compiled_html"] == "<h1>Taylor Swift</h1>"
+    assert dossier["tailored_resume"]["compiled_markdown"] == resume.compiled_markdown
+    assert dossier["tailored_resume"]["cover_letter"] == resume.cover_letter
+
+    # Ensure no new resume version or LLM request occurred
+    all_resumes = db_session.query(TailoredResume).filter(TailoredResume.job_id == job.id).all()
+    assert len(all_resumes) == 1
+    assert all_resumes[0].id == resume.id
+
+
+def test_application_continue_after_verification_endpoint(client, db_session: Session, setup_application_data: dict):
+    """Proves that continuing after verification transitions ACTION_REQUIRED back to staged and logs audit."""
+    from app.services.approval.state_machine import transition_application, ApplicationStatus
+
+    job = setup_application_data["job"]
+    resume = setup_application_data["resume"]
+
+    app_entity = application_service.create_application(
+        db=db_session,
+        job_id=job.id,
+        tailored_resume_id=resume.id,
+        status="approved",
+    )
+
+    # Put into ACTION_REQUIRED
+    transition_application(app_entity, ApplicationStatus.ACTION_REQUIRED.value, reason="CAPTCHA / Browser Challenge")
+    app_entity.error_message = "CAPTCHA detected"
+    db_session.commit()
+    db_session.refresh(app_entity)
+    assert app_entity.status == "action_required"
+
+    # Call continue-after-verification API
+    resp = client.post(f"/api/v1/applications/{app_entity.id}/continue-after-verification")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "staged_for_preparation"
+    assert data["error_message"] is None
+
+    # Check Audit Log
+    audit = (
+        db_session.query(AuditLog)
+        .filter(AuditLog.application_id == app_entity.id, AuditLog.action == "APPLICATION_CHALLENGE_RESUMED")
+        .first()
+    )
+    assert audit is not None
+
+

@@ -350,12 +350,26 @@ class ResumeTailoringService:
             tailored_data=raw_llm_json,
         )
 
-        # 10. Persist Document to Local Storage
+        # 10. Persist Documents to Local Storage (Markdown, HTML, PDF)
         storage_dir = Path(settings.STORAGE_DIR) / "tailored_resumes"
         storage_dir.mkdir(parents=True, exist_ok=True)
-        file_name = f"tailored_job_{job.id}_profile_{profile.id}.md"
-        file_path = storage_dir / file_name
-        file_path.write_text(compiled_md, encoding="utf-8")
+        md_file_name = f"tailored_job_{job.id}_profile_{profile.id}.md"
+        html_file_name = f"tailored_job_{job.id}_profile_{profile.id}.html"
+        pdf_file_name = f"tailored_job_{job.id}_profile_{profile.id}.pdf"
+
+        md_path = storage_dir / md_file_name
+        md_path.write_text(compiled_md, encoding="utf-8")
+
+        html_path = storage_dir / html_file_name
+        html_path.write_text(compiled_html, encoding="utf-8")
+
+        pdf_path = storage_dir / pdf_file_name
+        try:
+            await self.compiler.compile_pdf_async(compiled_html, pdf_path)
+            primary_file_path = str(pdf_path)
+        except Exception as e:
+            logger.warning(f"Failed to compile PDF during tailoring: {e}")
+            primary_file_path = str(pdf_path) if pdf_path.exists() else str(md_path)
 
         # 11. Extract flat list of highlighted skills and experience for DB
         skills_flat = []
@@ -399,7 +413,7 @@ class ResumeTailoringService:
         tailored_record.compiled_text = compiled_text
         tailored_record.compiled_html = compiled_html
         tailored_record.markdown_content = compiled_md
-        tailored_record.file_path = str(file_path)
+        tailored_record.file_path = primary_file_path
         tailored_record.traceability_matrix = validation_result.traceability_matrix
         tailored_record.validation_status = validation_result.status
         tailored_record.validation_details = {

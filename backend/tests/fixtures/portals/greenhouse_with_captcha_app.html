@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Greenhouse Job Application with CAPTCHA</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; background: #f8fafc; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-weight: bold; margin-bottom: 0.25rem; }
+    input[type="text"], input[type="email"], input[type="tel"], textarea { width: 100%; max-width: 500px; padding: 0.5rem; }
+    .submit-btn { background: #10b981; color: white; padding: 0.75rem 1.5rem; border: none; font-size: 1rem; cursor: pointer; }
+    .captcha-box { border: 1px solid #cbd5e1; padding: 1rem; background: #f1f5f9; max-width: 400px; margin-top: 1rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div id="application-container">
+    <h1>Senior Distributed Systems Architect - Application</h1>
+    <form id="application_form" action="/apply" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="first_name">First Name *</label>
+        <input type="text" id="first_name" name="first_name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="last_name">Last Name *</label>
+        <input type="text" id="last_name" name="last_name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone</label>
+        <input type="tel" id="phone" name="phone">
+      </div>
+
+      <div class="form-group">
+        <label for="location">Location (City, State / Country)</label>
+        <input type="text" id="location" name="location">
+      </div>
+
+      <div class="form-group">
+        <label for="linkedin">LinkedIn Profile</label>
+        <input type="text" id="linkedin" name="linkedin">
+      </div>
+
+      <div class="form-group">
+        <label for="github">GitHub Profile / Portfolio URL</label>
+        <input type="text" id="github" name="github">
+      </div>
+
+      <div class="form-group">
+        <label for="resume">Resume / CV (PDF, DOCX, TXT) *</label>
+        <input type="file" id="resume" name="resume" required>
+      </div>
+
+      <div class="form-group">
+        <label for="cover_letter_text">Cover Letter</label>
+        <textarea id="cover_letter_text" name="cover_letter_text" rows="4"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Are you legally authorized to work in the United States?</label>
+        <label><input type="radio" name="work_auth" id="work_auth_yes" value="yes"> Yes</label>
+        <label><input type="radio" name="work_auth" id="work_auth_no" value="no"> No</label>
+      </div>
+
+      <div class="form-group">
+        <label>Will you now or in the future require visa sponsorship?</label>
+        <label><input type="radio" name="sponsorship" id="sponsorship_yes" value="yes"> Yes</label>
+        <label><input type="radio" name="sponsorship" id="sponsorship_no" value="no"> No</label>
+      </div>
+
+      <!-- In-form CAPTCHA widget -->
+      <div class="form-group">
+        <div class="captcha-box g-recaptcha" id="recaptcha-widget" data-sitekey="dummy-key">
+          <p>Please verify that you are not a robot</p>
+          <input type="checkbox" id="recaptcha-anchor"> <label for="recaptcha-anchor" style="display:inline;">I'm not a robot</label>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 2rem;">
+        <input type="submit" id="submit_app" class="submit-btn" value="Submit Application">
+      </div>
+    </form>
+  </div>
+</body>
+</html>

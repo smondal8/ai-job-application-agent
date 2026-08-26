@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import html
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
@@ -750,6 +751,27 @@ class ResumeDocumentCompiler:
         header_lines.extend([today_str, "", f"Hiring Team\n{company}", "", f"Dear {company} Hiring Team,", "", body_content, "", "Sincerely,", "", name])
 
         return "\n".join(header_lines)
+
+    async def compile_pdf_async(self, html_content: str, output_path: Path) -> Path:
+        """Renders HTML content using Playwright Chromium and exports as an ATS-optimized, high-fidelity PDF."""
+        from playwright.async_api import async_playwright
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
+            )
+            page = await browser.new_page()
+            await page.set_content(html_content, wait_until="load")
+            await page.pdf(
+                path=str(output_path),
+                format="Letter",
+                print_background=True,
+                margin={"top": "0.4in", "bottom": "0.4in", "left": "0.4in", "right": "0.4in"},
+            )
+            await browser.close()
+        return output_path
 
 
 resume_document_compiler = ResumeDocumentCompiler()

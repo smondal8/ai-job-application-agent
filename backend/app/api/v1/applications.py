@@ -23,10 +23,11 @@ from app.schemas.preparation import (
     PreparationRunRequest,
     PreparationRunResponse,
     PreparationRunListResponse,
+    BrowserSessionResponse,
 )
 from app.services.application_service import application_service
 from app.services.approval import approval_service
-from app.services.preparation import browser_preparation_engine
+from app.services.preparation import browser_preparation_engine, browser_session_manager
 
 router = APIRouter(prefix="/applications", tags=["Application Dashboard, Approval & Browser Staging (Phases 7, 8, 9)"])
 
@@ -313,6 +314,130 @@ def get_latest_preparation_run(
     if not run:
         return None
     return PreparationRunResponse.model_validate(run)
+
+
+@router.post("/{application_id}/continue-after-verification", response_model=ApplicationResponse, summary="Resume Workflow After Manual Verification")
+def continue_after_verification(
+    application_id: int,
+    db: Session = Depends(get_db),
+) -> ApplicationResponse:
+    """Explicitly resume application workflow after user manually completes browser verification or CAPTCHA challenge."""
+    from datetime import datetime, timezone
+    from app.core.errors import NotFoundError
+    from app.models.application import Application
+    from app.models.audit import AuditLog
+    from app.services.approval.state_machine import ApplicationStatus, transition_application
+
+    app_record = db.query(Application).filter(Application.id == application_id).first()
+    if not app_record:
+        raise NotFoundError(f"Application #{application_id} not found.")
+
+    if app_record.status == ApplicationStatus.ACTION_REQUIRED.value:
+        transition_application(app_record, ApplicationStatus.STAGED_FOR_PREPARATION.value, reason="User completed verification")
+        app_record.error_message = None
+        db.commit()
+
+        audit = AuditLog(
+            application_id=app_record.id,
+            stage="browser_automation_staging",
+            action="APPLICATION_CHALLENGE_RESUMED",
+            message=f"User verified challenge and explicitly resumed browser preparation for application #{app_record.id}.",
+            payload={
+                "application_id": app_record.id,
+                "resumed_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        db.add(audit)
+        db.commit()
+        db.refresh(app_record)
+
+    return ApplicationResponse.model_validate(app_record)
+
+
+@router.get("/{application_id}/browser-session/status", response_model=BrowserSessionResponse, summary="Get Browser Session Status")
+async def get_browser_session_status(
+    application_id: int,
+    db: Session = Depends(get_db),
+) -> BrowserSessionResponse:
+    """Check if an active interactive browser session exists for the given application."""
+    from app.core.errors import NotFoundError
+    from app.models.application import Application
+
+    app_record = db.query(Application).filter(Application.id == application_id).first()
+    if not app_record:
+        raise NotFoundError(f"Application #{application_id} not found.")
+
+    is_active = await browser_session_manager.is_session_active(application_id)
+    session = browser_session_manager.get_session(application_id)
+
+    portal_url = app_record.portal_url or (app_record.job.url if app_record.job else None)
+
+    if is_active and session:
+        page_alive = session.page is not None and not session.page.is_closed()
+        browser_connected = session.browser is not None and session.browser.is_connected()
+        page_url = getattr(session.page, "url", session.portal_url) if page_alive else session.portal_url
+        return BrowserSessionResponse(
+            session_active=True,
+            application_id=application_id,
+            job_id=session.job_id,
+            portal_url=session.portal_url,
+            is_headless=session.is_headless,
+            page_alive=page_alive,
+            browser_connected=browser_connected,
+            page_url=page_url,
+            message="Active browser session available on desktop.",
+        )
+    else:
+        return BrowserSessionResponse(
+            session_active=False,
+            application_id=application_id,
+            job_id=app_record.job_id,
+            portal_url=portal_url,
+            is_headless=None,
+            page_alive=False,
+            browser_connected=False,
+            page_url=portal_url,
+            message="Browser session unavailable. A new browser preparation session is required.",
+        )
+
+
+@router.post("/{application_id}/browser-session/open", response_model=BrowserSessionResponse, summary="Open or Focus Application Browser")
+async def open_or_focus_browser_session(
+    application_id: int,
+    db: Session = Depends(get_db),
+) -> BrowserSessionResponse:
+    """Open or focus the interactive browser session for the target application (human CAPTCHA handoff)."""
+    res = await browser_session_manager.open_or_focus_session(db=db, application_id=application_id)
+    return BrowserSessionResponse(**res)
+
+
+@router.post("/{application_id}/browser-session/focus", response_model=BrowserSessionResponse, summary="Focus Existing Browser Session")
+async def focus_browser_session(
+    application_id: int,
+    db: Session = Depends(get_db),
+) -> BrowserSessionResponse:
+    """Focus an existing interactive browser session for the application if alive."""
+    from app.core.errors import NotFoundError
+    from app.models.application import Application
+
+    app_record = db.query(Application).filter(Application.id == application_id).first()
+    if not app_record:
+        raise NotFoundError(f"Application #{application_id} not found.")
+
+    focus_res = await browser_session_manager.focus_session(application_id)
+    if focus_res:
+        return BrowserSessionResponse(**focus_res)
+
+    portal_url = app_record.portal_url or (app_record.job.url if app_record.job else None)
+    return BrowserSessionResponse(
+        session_active=False,
+        application_id=application_id,
+        job_id=app_record.job_id,
+        portal_url=portal_url,
+        is_headless=None,
+        focused=False,
+        message="Browser session unavailable. A new browser preparation session is required.",
+    )
 
 
 @router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete Application")
