@@ -260,6 +260,25 @@ export const api = {
     return handleResponse<any>(res);
   },
 
+  async openOrFocusBrowserSession(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/browser-session/open`, {
+      method: 'POST',
+    });
+    return handleResponse<any>(res);
+  },
+
+  async focusBrowserSession(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/browser-session/focus`, {
+      method: 'POST',
+    });
+    return handleResponse<any>(res);
+  },
+
+  async getBrowserSessionStatus(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/browser-session/status`);
+    return handleResponse<any>(res);
+  },
+
   async deleteApplication(id: number): Promise<void> {
     const res = await fetch(`${API_BASE}/applications/${id}`, {
       method: 'DELETE',

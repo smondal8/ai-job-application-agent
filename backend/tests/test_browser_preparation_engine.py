@@ -10,9 +10,15 @@ from app.models.resume import TailoredResume
 from app.models.application import Application
 from app.models.preparation import BrowserPreparationRun
 from app.services.approval import approval_service
-from app.services.preparation import browser_preparation_engine
+from app.services.preparation import browser_preparation_engine, browser_session_manager
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "portals"
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_browser_sessions():
+    yield
+    await browser_session_manager.close_all()
 
 
 @pytest.fixture
@@ -52,19 +58,19 @@ def setup_phase9_approved_app(db_session: Session):
     analysis = JobAnalysis(
         job_id=job.id,
         candidate_profile_id=profile.id,
-        fit_score=99.0,
+        fit_score=95.0,
         status="completed",
     )
     db_session.add(analysis)
+    db_session.commit()
 
     resume = TailoredResume(
         job_id=job.id,
         candidate_profile_id=profile.id,
         job_analysis_id=analysis.id,
         prompt_version="v1.0.0",
-        tailored_summary="Mathematician whose calculations of orbital mechanics were critical to the success of crewed spaceflights.",
-        cover_letter="Dear JPL Team,\n\nI am eager to contribute trajectory mathematics to your upcoming Mars landing missions.",
-        compiled_markdown="# Katherine Johnson\n\nTrajectory Mathematician",
+        tailored_summary="Calculated orbital trajectories for Mercury, Apollo, and Space Shuttle missions.",
+        compiled_markdown="# Katherine Johnson\n\nMathematician specializing in orbital mechanics.",
         validation_status="valid",
         status="ready_for_review",
     )
@@ -74,8 +80,8 @@ def setup_phase9_approved_app(db_session: Session):
 
     app_entity = Application(
         job_id=job.id,
-        tailored_resume_id=resume.id,
         candidate_profile_id=profile.id,
+        tailored_resume_id=resume.id,
         status="ready_for_review",
         portal_type="greenhouse",
         answers_payload={"work_auth": True, "sponsorship": False},
@@ -92,14 +98,13 @@ def setup_phase9_approved_app(db_session: Session):
     }
 
 
-def test_preparation_engine_security_gate_blocks_unapproved_application(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_preparation_engine_security_gate_blocks_unapproved_application(db_session: Session, setup_phase9_approved_app: dict):
     app_entity = setup_phase9_approved_app["app"]
 
-    # Application is in ready_for_review (NOT APPROVED)
-    # Calling preparation engine MUST raise ForbiddenError without opening browser
     fixture_url = f"file://{FIXTURES_DIR / 'greenhouse_job_app.html'}"
     with pytest.raises(ForbiddenError):
-        browser_preparation_engine.prepare_application(
+        await browser_preparation_engine.prepare_application_async(
             db=db_session,
             application_id=app_entity.id,
             headless=True,
@@ -107,21 +112,19 @@ def test_preparation_engine_security_gate_blocks_unapproved_application(db_sessi
         )
 
 
-def test_preparation_engine_security_gate_blocks_tampered_application(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_preparation_engine_security_gate_blocks_tampered_application(db_session: Session, setup_phase9_approved_app: dict):
     app_entity = setup_phase9_approved_app["app"]
     profile = setup_phase9_approved_app["profile"]
 
-    # 1. Grant human approval
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
-    # 2. Tamper with candidate profile
     profile.full_name = "Katherine Johnson (Tampered)"
     db_session.commit()
 
-    # 3. Preparation engine MUST detect material change and raise ForbiddenError
     fixture_url = f"file://{FIXTURES_DIR / 'greenhouse_job_app.html'}"
     with pytest.raises(ForbiddenError):
-        browser_preparation_engine.prepare_application(
+        await browser_preparation_engine.prepare_application_async(
             db=db_session,
             application_id=app_entity.id,
             headless=True,
@@ -129,14 +132,14 @@ def test_preparation_engine_security_gate_blocks_tampered_application(db_session
         )
 
 
-def test_preparation_engine_greenhouse_staging(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_preparation_engine_greenhouse_staging(db_session: Session, setup_phase9_approved_app: dict):
     app_entity = setup_phase9_approved_app["app"]
 
-    # 1. Grant approval
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'greenhouse_job_app.html'}"
-    run = browser_preparation_engine.prepare_application(
+    run = await browser_preparation_engine.prepare_application_async(
         db=db_session,
         application_id=app_entity.id,
         headless=True,
@@ -153,12 +156,12 @@ def test_preparation_engine_greenhouse_staging(db_session: Session, setup_phase9
     assert run.screenshot_path is not None
     assert Path(run.screenshot_path).exists()
 
-    # NON-NEGOTIABLE CHECK: Submit button was NOT clicked
     assert run.final_submit_clicked is False
     assert run.guard_triggered is True
 
 
-def test_preparation_engine_lever_staging(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_preparation_engine_lever_staging(db_session: Session, setup_phase9_approved_app: dict):
     app_entity = setup_phase9_approved_app["app"]
     app_entity.portal_type = "lever"
     db_session.commit()
@@ -166,7 +169,7 @@ def test_preparation_engine_lever_staging(db_session: Session, setup_phase9_appr
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'lever_job_app.html'}"
-    run = browser_preparation_engine.prepare_application(
+    run = await browser_preparation_engine.prepare_application_async(
         db=db_session,
         application_id=app_entity.id,
         headless=True,
@@ -180,7 +183,8 @@ def test_preparation_engine_lever_staging(db_session: Session, setup_phase9_appr
     assert run.guard_triggered is True
 
 
-def test_non_negotiable_final_submit_guard_on_obvious_submit_button(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_non_negotiable_final_submit_guard_on_obvious_submit_button(db_session: Session, setup_phase9_approved_app: dict):
     """Proves that even when a prominent submit button is rendered, the browser engine NEVER clicks submit."""
     app_entity = setup_phase9_approved_app["app"]
     app_entity.portal_type = "generic"
@@ -188,7 +192,7 @@ def test_non_negotiable_final_submit_guard_on_obvious_submit_button(db_session: 
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'obvious_submit_app.html'}"
-    run = browser_preparation_engine.prepare_application(
+    run = await browser_preparation_engine.prepare_application_async(
         db=db_session,
         application_id=app_entity.id,
         headless=True,
@@ -200,13 +204,14 @@ def test_non_negotiable_final_submit_guard_on_obvious_submit_button(db_session: 
     assert run.guard_triggered is True
 
 
-def test_preparation_engine_detects_captcha_and_stops_safely(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_preparation_engine_detects_captcha_and_stops_safely(db_session: Session, setup_phase9_approved_app: dict):
     """Proves that when CAPTCHA / bot challenge is present, engine safely pauses without bypassing and puts application into ACTION_REQUIRED."""
     app_entity = setup_phase9_approved_app["app"]
     approval = approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'captcha_challenge_app.html'}"
-    run = browser_preparation_engine.prepare_application(
+    run = await browser_preparation_engine.prepare_application_async(
         db=db_session,
         application_id=app_entity.id,
         headless=True,
@@ -231,11 +236,14 @@ def test_preparation_engine_detects_captcha_and_stops_safely(db_session: Session
     assert app_entity.job_id == setup_phase9_approved_app["job"].id
     assert app_entity.approval_token == approval.approval_token
 
-    # 4. Hashes remain identical (no resume regeneration or tampering)
+    # 4. Live browser session registered and active
+    assert await browser_session_manager.is_session_active(app_entity.id) is True
+
+    # 5. Hashes remain identical (no resume regeneration or tampering)
     verify_res = approval_service.verify_approval(db=db_session, application_id=app_entity.id)
     assert verify_res["is_valid"] is True
 
-    # 5. User explicitly resumes after manual verification
+    # 6. User explicitly resumes after manual verification
     from app.services.approval.state_machine import transition_application, ApplicationStatus
     transition_application(app_entity, ApplicationStatus.STAGED_FOR_PREPARATION.value, reason="User completed verification")
     app_entity.error_message = None
@@ -244,17 +252,17 @@ def test_preparation_engine_detects_captcha_and_stops_safely(db_session: Session
 
     assert app_entity.status == "staged_for_preparation"
     assert app_entity.error_message is None
-    # Approval remains valid
     assert approval_service.verify_approval(db=db_session, application_id=app_entity.id)["is_valid"] is True
 
 
-def test_preparation_engine_detects_auth_wall_and_stops_safely(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_preparation_engine_detects_auth_wall_and_stops_safely(db_session: Session, setup_phase9_approved_app: dict):
     """Proves that when login authentication wall is present, engine pauses for human input and sets ACTION_REQUIRED."""
     app_entity = setup_phase9_approved_app["app"]
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'auth_login_app.html'}"
-    run = browser_preparation_engine.prepare_application(
+    run = await browser_preparation_engine.prepare_application_async(
         db=db_session,
         application_id=app_entity.id,
         headless=True,
@@ -270,7 +278,8 @@ def test_preparation_engine_detects_auth_wall_and_stops_safely(db_session: Sessi
     assert app_entity.error_message is not None
 
 
-def test_preparation_engine_pauses_on_ambiguous_fields(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_preparation_engine_pauses_on_ambiguous_fields(db_session: Session, setup_phase9_approved_app: dict):
     """Proves that when required unsupported/ambiguous fields exist, engine pauses for human input."""
     app_entity = setup_phase9_approved_app["app"]
     app_entity.portal_type = "generic"
@@ -278,7 +287,7 @@ def test_preparation_engine_pauses_on_ambiguous_fields(db_session: Session, setu
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'ambiguous_fields_app.html'}"
-    run = browser_preparation_engine.prepare_application(
+    run = await browser_preparation_engine.prepare_application_async(
         db=db_session,
         application_id=app_entity.id,
         headless=True,
@@ -290,7 +299,8 @@ def test_preparation_engine_pauses_on_ambiguous_fields(db_session: Session, setu
     assert run.final_submit_clicked is False
 
 
-def test_preparation_engine_resists_adversarial_prompt_injection(db_session: Session, setup_phase9_approved_app: dict):
+@pytest.mark.asyncio
+async def test_preparation_engine_resists_adversarial_prompt_injection(db_session: Session, setup_phase9_approved_app: dict):
     """Proves that page content / prompt injections cannot alter system policy or force auto-submit."""
     app_entity = setup_phase9_approved_app["app"]
     app_entity.portal_type = "generic"
@@ -298,7 +308,7 @@ def test_preparation_engine_resists_adversarial_prompt_injection(db_session: Ses
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'prompt_injection_app.html'}"
-    run = browser_preparation_engine.prepare_application(
+    run = await browser_preparation_engine.prepare_application_async(
         db=db_session,
         application_id=app_entity.id,
         headless=True,
@@ -308,3 +318,45 @@ def test_preparation_engine_resists_adversarial_prompt_injection(db_session: Ses
     assert run.status == "staged"
     assert run.final_submit_clicked is False
     assert run.guard_triggered is True
+
+
+@pytest.mark.asyncio
+async def test_preparation_populates_all_fields_before_captcha_pause(db_session: Session, setup_phase9_approved_app: dict):
+    """Proves that when a form has fields + CAPTCHA widget, engine fills all supported fields AND uploads resume BEFORE pausing."""
+    app_entity = setup_phase9_approved_app["app"]
+    resume = setup_phase9_approved_app["resume"]
+    resume.cover_letter = "Dear NASA JPL Team,\n\nI am thrilled to apply for the Senior Flight Dynamics Engineer position."
+    db_session.commit()
+
+    approval_service.grant_approval(db=db_session, application_id=app_entity.id)
+
+    fixture_url = f"file://{FIXTURES_DIR / 'greenhouse_with_captcha_app.html'}"
+    run = await browser_preparation_engine.prepare_application_async(
+        db=db_session,
+        application_id=app_entity.id,
+        headless=True,
+        custom_portal_url=fixture_url,
+    )
+
+    # 1. Run paused for CAPTCHA
+    assert run.status == "blocked_by_captcha"
+    assert run.captcha_detected is True
+    assert run.final_submit_clicked is False
+
+    # 2. BUT fields WERE filled before pausing!
+    assert len(run.fields_filled) >= 6
+    field_names = [f["field"] for f in run.fields_filled]
+    assert "first_name" in field_names
+    assert "last_name" in field_names
+    assert "email" in field_names
+    assert "phone" in field_names
+    assert "location" in field_names
+    assert "linkedin_url" in field_names
+    assert "resume_file" in field_names
+    assert run.resume_uploaded is True
+
+    # 3. Session remains alive and application is ACTION_REQUIRED
+    db_session.refresh(app_entity)
+    assert app_entity.status == "action_required"
+    assert await browser_session_manager.is_session_active(app_entity.id) is True
+

@@ -43,3 +43,19 @@ class PreparationRunListResponse(BaseModel):
 
     items: List[PreparationRunResponse]
     total: int
+
+
+class BrowserSessionResponse(BaseModel):
+    """Status and metadata for an active or opened Playwright browser session."""
+
+    session_active: bool = Field(description="Whether a live browser session is active")
+    application_id: int
+    job_id: Optional[int] = None
+    portal_url: Optional[str] = None
+    is_headless: Optional[bool] = None
+    focused: Optional[bool] = None
+    page_alive: Optional[bool] = Field(default=None, description="Whether the Playwright page is currently open and responsive")
+    browser_connected: Optional[bool] = Field(default=None, description="Whether the Chromium browser process is connected")
+    page_url: Optional[str] = Field(default=None, description="Current live URL of the browser page")
+    message: str = Field(description="Status message or user instruction")
+

@@ -11,9 +11,15 @@ from app.models.application import Application
 from app.models.approval import ApplicationApproval
 from app.models.preparation import BrowserPreparationRun
 from app.services.approval import approval_service
-from app.services.preparation import browser_preparation_engine
+from app.services.preparation import browser_preparation_engine, browser_session_manager
 from app.services.jd_analysis_service import jd_analysis_service
 from app.services.resume_tailoring_service import resume_tailoring_service
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_browser_sessions():
+    yield
+    await browser_session_manager.close_all()
 
 
 @pytest.mark.asyncio

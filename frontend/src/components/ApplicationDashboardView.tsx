@@ -76,6 +76,9 @@ export const ApplicationDashboardView: React.FC = () => {
   const [latestPrepRun, setLatestPrepRun] = useState<BrowserPreparationRun | null>(null);
   const [isRunningStaging, setIsRunningStaging] = useState<boolean>(false);
   const [isResumingVerification, setIsResumingVerification] = useState<boolean>(false);
+  const [isOpeningBrowser, setIsOpeningBrowser] = useState<boolean>(false);
+  const [browserStatusMsg, setBrowserStatusMsg] = useState<string | null>(null);
+  const [sessionUnavailable, setSessionUnavailable] = useState<boolean>(false);
   const [customPortalUrl, setCustomPortalUrl] = useState<string>('');
   const [stagingError, setStagingError] = useState<string | null>(null);
 
@@ -226,6 +229,28 @@ export const ApplicationDashboardView: React.FC = () => {
       setStagingError(err.message || 'Browser preparation failed.');
     } finally {
       setIsRunningStaging(false);
+    }
+  };
+
+  const handleOpenOrFocusBrowser = async () => {
+    if (!dossier) return;
+    setIsOpeningBrowser(true);
+    setBrowserStatusMsg(null);
+    try {
+      const res = await api.openOrFocusBrowserSession(dossier.application.id);
+
+      if (res.session_active) {
+        setSessionUnavailable(false);
+        setBrowserStatusMsg(res.message || 'Application browser session active on desktop.');
+      } else {
+        setSessionUnavailable(true);
+        setBrowserStatusMsg(res.message || 'Browser session unavailable. A new browser preparation session is required.');
+      }
+    } catch (err: any) {
+      setSessionUnavailable(true);
+      setBrowserStatusMsg(`Failed to reach browser session: ${err.message}`);
+    } finally {
+      setIsOpeningBrowser(false);
     }
   };
 
@@ -684,13 +709,13 @@ export const ApplicationDashboardView: React.FC = () => {
                       background: 'rgba(251, 191, 36, 0.12)',
                       border: '1px solid rgba(251, 191, 36, 0.4)',
                       borderRadius: '8px',
-                      padding: '1rem',
+                      padding: '1.25rem',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '0.75rem',
+                      gap: '0.875rem',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <AlertTriangle size={20} color="#fbbf24" />
                         <strong style={{ fontSize: '0.9375rem', color: '#fbbf24' }}>
@@ -701,9 +726,23 @@ export const ApplicationDashboardView: React.FC = () => {
                     </div>
 
                     <p style={{ fontSize: '0.8125rem', color: '#f8fafc', lineHeight: 1.5 }}>
-                      Automation has paused safely because the job portal requires human verification (e.g. CAPTCHA, bot check, or login challenge). Anti-bot protection is never bypassed automatically. Please complete the verification manually in the browser portal, then explicitly continue.
+                      Automation has paused safely because the job portal requires human verification (e.g. CAPTCHA, bot check, or login challenge). Anti-bot protection is never bypassed automatically.
                     </p>
 
+                    {/* Step-by-Step Instructions */}
+                    <div style={{ background: '#090d16', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.75rem' }}>
+                      <div style={{ color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '0.35rem', fontSize: '0.6875rem' }}>
+                        Required Steps for Completion:
+                      </div>
+                      <ol style={{ paddingLeft: '1.25rem', margin: 0, color: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <li>Click <strong>Open / Focus Application Browser</strong> to access the exact active application portal.</li>
+                        <li>Complete the CAPTCHA / bot verification manually on the page.</li>
+                        <li>Return to this dashboard.</li>
+                        <li>Click <strong>Continue After Verification</strong> to resume workflow staging.</li>
+                      </ol>
+                    </div>
+
+                    {/* Metadata Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', background: '#090d16', padding: '0.625rem', borderRadius: '6px', fontSize: '0.75rem' }}>
                       <div>
                         <span style={{ color: 'var(--text-muted)' }}>Company: </span>
@@ -743,7 +782,64 @@ export const ApplicationDashboardView: React.FC = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    {/* Browser Status Feedback if present */}
+                    {browserStatusMsg && (
+                      <div
+                        style={{
+                          background: sessionUnavailable ? 'rgba(239, 68, 68, 0.15)' : 'rgba(56, 189, 248, 0.12)',
+                          border: `1px solid ${sessionUnavailable ? 'rgba(239, 68, 68, 0.4)' : 'rgba(56, 189, 248, 0.3)'}`,
+                          borderRadius: '6px',
+                          padding: '0.5rem 0.75rem',
+                          fontSize: '0.75rem',
+                          color: sessionUnavailable ? '#fca5a5' : '#38bdf8',
+                        }}
+                      >
+                        {browserStatusMsg}
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.625rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => handleOpenOrFocusBrowser()}
+                        disabled={isOpeningBrowser}
+                        className="btn btn-secondary"
+                        style={{
+                          borderColor: '#38bdf8',
+                          color: '#38bdf8',
+                          fontWeight: 600,
+                          fontSize: '0.8125rem',
+                          padding: '0.4rem 0.85rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                        }}
+                      >
+                        <Globe size={14} />
+                        <span>{isOpeningBrowser ? 'Connecting...' : 'Open / Focus Application Browser'}</span>
+                      </button>
+
+                      {sessionUnavailable && (
+                        <button
+                          onClick={() => handleOpenOrFocusBrowser()}
+                          disabled={isOpeningBrowser}
+                          className="btn btn-secondary"
+                          style={{
+                            borderColor: '#fbbf24',
+                            color: '#fbbf24',
+                            fontWeight: 600,
+                            fontSize: '0.8125rem',
+                            padding: '0.4rem 0.85rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                          }}
+                        >
+                          <RefreshCw size={14} />
+                          <span>Start New Browser Session</span>
+                        </button>
+                      )}
+
                       <button
                         onClick={handleContinueAfterVerification}
                         disabled={isResumingVerification}

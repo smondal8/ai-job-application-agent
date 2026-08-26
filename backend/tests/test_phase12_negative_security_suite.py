@@ -10,7 +10,13 @@ from app.models.resume import TailoredResume
 from app.models.application import Application
 from app.models.approval import ApplicationApproval
 from app.services.approval import approval_service
-from app.services.preparation import browser_preparation_engine
+from app.services.preparation import browser_preparation_engine, browser_session_manager
+
+
+@pytest.fixture(autouse=True)
+async def cleanup_browser_sessions():
+    yield
+    await browser_session_manager.close_all()
 
 
 def setup_approved_application(db: Session, tmp_path: Path):
