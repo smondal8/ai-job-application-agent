@@ -360,3 +360,124 @@ async def test_preparation_populates_all_fields_before_captcha_pause(db_session:
     assert app_entity.status == "action_required"
     assert await browser_session_manager.is_session_active(app_entity.id) is True
 
+
+@pytest.mark.asyncio
+async def test_preparation_selects_and_uploads_pdf_artifact_to_pdf_portal(db_session: Session, setup_phase9_approved_app: dict):
+    """Proves that engine compiles/retrieves PDF and uploads PDF artifact to portals accepting PDF."""
+    app_entity = setup_phase9_approved_app["app"]
+    resume = setup_phase9_approved_app["resume"]
+    resume.compiled_html = "<html><body><h1>Katherine Johnson</h1><p>Orbital Mathematician</p></body></html>"
+    db_session.commit()
+
+    approval_service.grant_approval(db=db_session, application_id=app_entity.id)
+
+    fixture_url = f"file://{FIXTURES_DIR / 'pdf_only_job_app.html'}"
+    run = await browser_preparation_engine.prepare_application_async(
+        db=db_session,
+        application_id=app_entity.id,
+        headless=True,
+        custom_portal_url=fixture_url,
+    )
+
+    assert run.status == "staged"
+    assert run.resume_uploaded is True
+    assert run.resume_file_path is not None
+    assert run.resume_file_path.endswith(".pdf")
+
+    # Verify field filled record
+    uploaded_records = [f for f in run.fields_filled if f["field"] == "resume_file"]
+    assert len(uploaded_records) == 1
+    assert uploaded_records[0]["value"].endswith(".pdf")
+
+
+@pytest.mark.asyncio
+async def test_preparation_rejects_markdown_artifact_when_portal_accepts_pdf_only(db_session: Session, setup_phase9_approved_app: dict):
+    """Proves that Markdown (.md) is strictly disallowed when portal requires PDF, resulting in clean manual-upload fallback."""
+    from app.services.preparation.adapter_base import PreparationContext
+    from app.services.preparation.adapters.generic_adapter import GenericPortalPreparationAdapter
+    from playwright.async_api import async_playwright
+    import tempfile
+
+    app_entity = setup_phase9_approved_app["app"]
+    approval_service.grant_approval(db=db_session, application_id=app_entity.id)
+
+    # Create a dummy .md file
+    with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as f:
+        f.write(b"# Markdown Resume")
+        md_file_path = Path(f.name)
+
+    context = PreparationContext(
+        application_id=app_entity.id,
+        job=setup_phase9_approved_app["job"],
+        candidate=setup_phase9_approved_app["profile"],
+        tailored_resume=setup_phase9_approved_app["resume"],
+        answers_payload={},
+        approval_token=app_entity.approval_token or "",
+        portal_url=f"file://{FIXTURES_DIR / 'pdf_only_job_app.html'}",
+        screenshot_dir=Path("/tmp"),
+        resume_file_path=md_file_path,  # Explicitly pass .md
+    )
+
+    adapter = GenericPortalPreparationAdapter()
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        res = await adapter.prepare(page, context)
+        await browser.close()
+
+    # Must NOT upload the .md file
+    assert res.resume_uploaded is False
+    # Must record clear human action required reason
+    unresolved = [u for u in res.unresolved_fields if u.get("field") == "resume"]
+    assert len(unresolved) == 1
+    assert "Manual resume upload is required" in unresolved[0]["reason"]
+
+
+@pytest.mark.asyncio
+async def test_regression_tailored_job_23_profile_1_md_vs_pdf_selection(db_session: Session, tmp_path: Path):
+    """
+    Direct regression test for Issue:
+    tailored_job_23_profile_1.md was previously selected instead of compiled PDF.
+    Verifies that ensure_tailored_pdf_artifact and resolve_best_upload_artifact prioritize and return .pdf.
+    """
+    from app.services.tailoring.resume_artifact_service import ensure_tailored_pdf_artifact, resolve_best_upload_artifact
+    from app.core.config import Settings
+
+    custom_settings = Settings(STORAGE_DIR=str(tmp_path))
+    storage_dir = tmp_path / "tailored_resumes"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+
+    # Simulate existing .md file
+    md_file = storage_dir / "tailored_job_23_profile_1.md"
+    md_file.write_text("# Candidate Markdown Resume\n\n- Accomplishment 1", encoding="utf-8")
+
+    dummy_resume = TailoredResume(
+        id=23,
+        job_id=23,
+        candidate_profile_id=1,
+        compiled_html="<html><body><h1>Candidate</h1><p>Accomplishment 1</p></body></html>",
+        compiled_markdown="# Candidate Markdown Resume",
+        file_path=str(md_file),  # Database points to .md originally
+    )
+
+    # 1. ensure_tailored_pdf_artifact must compile/return the .pdf file
+    resolved_pdf = await ensure_tailored_pdf_artifact(dummy_resume, job_id=23, candidate_profile_id=1, settings=custom_settings)
+    assert resolved_pdf is not None
+    assert resolved_pdf.name == "tailored_job_23_profile_1.pdf"
+    assert resolved_pdf.exists()
+    assert resolved_pdf.stat().st_size > 0
+
+    # 2. resolve_best_upload_artifact for portal accepting [".pdf"] must select .pdf and NEVER .md
+    best_file, err = resolve_best_upload_artifact(
+        tailored_resume=dummy_resume,
+        job_id=23,
+        candidate_profile_id=1,
+        accepted_extensions=[".pdf"],
+        settings=custom_settings,
+    )
+    assert err is None
+    assert best_file is not None
+    assert best_file.suffix == ".pdf"
+    assert best_file.name == "tailored_job_23_profile_1.pdf"
+
+

@@ -67,22 +67,16 @@ class BrowserPreparationEngine:
         if not portal_url:
             raise BadRequestError("No target portal URL configured for this job application.")
 
-        # 3. Create approved resume upload file if available
+        # 3. Ensure and resolve approved tailored resume PDF artifact
         temp_resume_file: Optional[Path] = None
         if tailored_resume:
-            if tailored_resume.file_path and Path(tailored_resume.file_path).exists():
-                temp_resume_file = Path(tailored_resume.file_path)
-            else:
-                resume_content = (
-                    tailored_resume.compiled_markdown
-                    or tailored_resume.compiled_text
-                    or tailored_resume.cover_letter
-                    or f"# {candidate.full_name}\n\nCandidate Resume"
-                )
-                resumes_dir = Path(self.settings.STORAGE_DIR) / "staged_resumes"
-                resumes_dir.mkdir(parents=True, exist_ok=True)
-                temp_resume_file = resumes_dir / f"approved_resume_app_{application_id}.txt"
-                temp_resume_file.write_text(resume_content, encoding="utf-8")
+            from app.services.tailoring.resume_artifact_service import ensure_tailored_pdf_artifact
+            temp_resume_file = await ensure_tailored_pdf_artifact(
+                tailored_resume=tailored_resume,
+                job_id=job.id,
+                candidate_profile_id=candidate.id,
+                settings=self.settings,
+            )
 
         screenshot_dir = Path(self.settings.STORAGE_DIR) / "screenshots" / f"app_{application_id}"
         screenshot_dir.mkdir(parents=True, exist_ok=True)

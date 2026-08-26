@@ -182,6 +182,42 @@ class BasePortalPreparationAdapter(ABC):
             pass
         return False
 
+    async def get_portal_accepted_extensions(self, file_loc: Any) -> List[str]:
+        """Inspects file input accept attribute and nearby label text for accepted file extensions."""
+        accepted: List[str] = []
+        try:
+            count = await file_loc.count()
+            for i in range(count):
+                el = file_loc.nth(i)
+                accept_attr = await el.get_attribute("accept") or ""
+                if accept_attr:
+                    tokens = [t.strip().lower() for t in accept_attr.split(",")]
+                    for tok in tokens:
+                        if tok.startswith("."):
+                            accepted.append(tok)
+                        elif tok == "application/pdf":
+                            accepted.append(".pdf")
+                        elif tok in (
+                            "application/msword",
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        ):
+                            accepted.append(".docx")
+            # If no accept attribute, check if surrounding container mentions PDF / DOCX
+            if not accepted:
+                try:
+                    surrounding_text = await file_loc.first.evaluate(
+                        "el => (el.closest('div, section, fieldset, form') ? el.closest('div, section, fieldset, form').innerText : '').toLowerCase()"
+                    )
+                    if "only pdf" in surrounding_text or "pdf only" in surrounding_text:
+                        accepted.append(".pdf")
+                    elif "pdf" in surrounding_text and "docx" in surrounding_text:
+                        accepted.extend([".pdf", ".docx", ".doc"])
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return list(dict.fromkeys(accepted))
+
     async def fill_common_form_fields(
         self,
         page: Any,
@@ -322,12 +358,60 @@ class BasePortalPreparationAdapter(ABC):
                 logger.info(f"application_id={context.application_id} field=portfolio_url source=master_profile action=filled")
 
         # 10. Approved Tailored Resume Upload
+        resume_file_loc = page.locator(
+            "input[type='file'][name*='resume'], input[type='file'][id*='resume'], "
+            "input[type='file'][data-automation-id*='resume'], input[type='file'][aria-label*='Resume'], "
+            "input[type='file'][accept*='pdf'], input[type='file']"
+        )
+        selected_file_path: Optional[Path] = None
         if context.resume_file_path and Path(context.resume_file_path).exists():
-            file_loc = page.locator("input[type='file']")
-            if await self.safe_upload_locator(file_loc, str(context.resume_file_path)):
-                resume_uploaded = True
-                fields_filled.append({"field": "resume_file", "value": str(context.resume_file_path), "selector": "input[type=file]"})
-                logger.info(f"application_id={context.application_id} field=resume_file source=approved_tailored_resume action=uploaded")
+            selected_file_path = Path(context.resume_file_path)
+
+        accepted_exts = await self.get_portal_accepted_extensions(resume_file_loc)
+
+        if selected_file_path:
+            file_ext = selected_file_path.suffix.lower()
+
+            # Step 3 & 8: Disallow .md or .txt when portal expects document formats or specifies PDF
+            if file_ext in [".md", ".txt"] and (not accepted_exts or ".pdf" in accepted_exts or "pdf" in accepted_exts):
+                logger.warning(
+                    f"application_id={context.application_id} field=resume_file action=rejected_markdown "
+                    f"file={selected_file_path.name}. Markdown is disallowed for portal document upload."
+                )
+                unresolved_fields.append({
+                    "field": "resume",
+                    "type": "file",
+                    "reason": "Approved resume PDF is unavailable. Manual resume upload is required.",
+                })
+            elif accepted_exts and file_ext not in accepted_exts and "*" not in accepted_exts:
+                logger.warning(
+                    f"application_id={context.application_id} field=resume_file action=incompatible_format "
+                    f"file={selected_file_path.name} ext={file_ext} accepted={accepted_exts}"
+                )
+                unresolved_fields.append({
+                    "field": "resume",
+                    "type": "file",
+                    "reason": f"Portal requires {', '.join(accepted_exts)}. Approved resume ({file_ext}) cannot be uploaded. Manual resume upload is required.",
+                })
+            else:
+                if await self.safe_upload_locator(resume_file_loc, str(selected_file_path)):
+                    resume_uploaded = True
+                    fields_filled.append({
+                        "field": "resume_file",
+                        "value": selected_file_path.name,
+                        "selector": "input[type=file]",
+                    })
+                    logger.info(
+                        f"application_id={context.application_id} field=resume_file source=approved_tailored_resume "
+                        f"action=uploaded file={selected_file_path.name}"
+                    )
+        elif context.tailored_resume:
+            logger.warning(f"application_id={context.application_id} field=resume_file action=missing_pdf")
+            unresolved_fields.append({
+                "field": "resume",
+                "type": "file",
+                "reason": "Approved resume PDF is unavailable. Manual resume upload is required.",
+            })
 
         # 11. Cover Letter / Additional Comments
         cover_text = context.tailored_resume.cover_letter if context.tailored_resume and context.tailored_resume.cover_letter else None

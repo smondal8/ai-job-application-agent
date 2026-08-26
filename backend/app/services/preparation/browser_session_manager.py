@@ -282,19 +282,13 @@ class BrowserSessionManager:
             settings = get_settings()
             temp_resume_file: Optional[Path] = None
             if application.tailored_resume:
-                if application.tailored_resume.file_path and Path(application.tailored_resume.file_path).exists():
-                    temp_resume_file = Path(application.tailored_resume.file_path)
-                else:
-                    resume_content = (
-                        application.tailored_resume.compiled_markdown
-                        or application.tailored_resume.compiled_text
-                        or application.tailored_resume.cover_letter
-                        or (f"# {application.candidate_profile.full_name}\n\nCandidate Resume" if application.candidate_profile else "Candidate Resume")
-                    )
-                    resumes_dir = Path(settings.STORAGE_DIR) / "staged_resumes"
-                    resumes_dir.mkdir(parents=True, exist_ok=True)
-                    temp_resume_file = resumes_dir / f"approved_resume_app_{application_id}.txt"
-                    temp_resume_file.write_text(resume_content, encoding="utf-8")
+                from app.services.tailoring.resume_artifact_service import ensure_tailored_pdf_artifact
+                temp_resume_file = await ensure_tailored_pdf_artifact(
+                    tailored_resume=application.tailored_resume,
+                    job_id=job.id,
+                    candidate_profile_id=application.candidate_profile_id or (application.candidate_profile.id if application.candidate_profile else 1),
+                    settings=settings,
+                )
 
             screenshot_dir = Path(settings.STORAGE_DIR) / "screenshots" / f"app_{application_id}"
             context = PreparationContext(
