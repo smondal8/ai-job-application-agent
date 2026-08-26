@@ -72,31 +72,9 @@ interface VerifiedGroundTruthContext {
   formatted_llm_prompt_context: string;
 }`,
     },
-    job_database: {
-      title: 'Normalized Job DB & Ingestion',
-      phase: 'Phase 3 (Complete)',
-      icon: <Briefcase size={24} color="#38bdf8" />,
-      status: 'active',
-      description:
-        'Normalized job listings catalog and ingestion pipeline supporting JSON and CSV feeds. Features company registry normalization and deterministic conservative deduplication preserving distinct roles and locations.',
-      inputs: ['JSON Feeds', 'CSV Fixtures', 'File Uploads', 'Manual Postings'],
-      outputs: ['Normalized Job Catalog', 'Registered Companies', 'Batch Ingestion Ledger'],
-      tables: ['jobs', 'companies', 'job_ingestion_batches', 'audit_logs'],
-      contract: `// Phase 3 Ingestion Batch Response
-interface JobIngestionBatchResponse {
-  batch_id: string;
-  source: string;
-  total_records: number;
-  inserted_count: number;
-  updated_count: number;
-  duplicate_count: number;
-  error_count: number;
-  status: 'completed' | 'failed';
-}`,
-    },
     job_discovery: {
       title: 'Job Discovery & Orchestration',
-      phase: 'Phase 4 (Complete)',
+      phase: 'Phase 3 (Complete)',
       icon: <Compass size={24} color="#38bdf8" />,
       status: 'active',
       description:
@@ -104,7 +82,7 @@ interface JobIngestionBatchResponse {
       inputs: ['Search Criteria (Keywords, Target Companies, Locations)', 'Saved Search Profiles'],
       outputs: ['Discovered Job Records', 'Discovery Run Audit Logs', 'Direct Ingestion into DB'],
       tables: ['job_discovery_runs', 'job_search_profiles', 'jobs', 'audit_logs'],
-      contract: `// Phase 4 Discovery Run Response
+      contract: `// Phase 3 Discovery Run Response
 interface DiscoveryRunResponse {
   run_id: string;
   source: string;
@@ -114,6 +92,28 @@ interface DiscoveryRunResponse {
   duplicate_count: number;
   status: 'completed' | 'partial' | 'failed';
   adapter_logs: Array<{ adapter: string; status: string; discovered_count: number }>;
+}`,
+    },
+    job_database: {
+      title: 'Normalized Job DB & Ingestion',
+      phase: 'Phase 4 (Complete)',
+      icon: <Briefcase size={24} color="#38bdf8" />,
+      status: 'active',
+      description:
+        'Normalized job listings catalog and ingestion pipeline supporting JSON and CSV feeds. Features company registry normalization and deterministic conservative deduplication preserving distinct roles and locations.',
+      inputs: ['JSON Feeds', 'CSV Fixtures', 'File Uploads', 'Manual Postings'],
+      outputs: ['Normalized Job Catalog', 'Registered Companies', 'Batch Ingestion Ledger'],
+      tables: ['jobs', 'companies', 'job_ingestion_batches', 'audit_logs'],
+      contract: `// Phase 4 Ingestion Batch Response
+interface JobIngestionBatchResponse {
+  batch_id: string;
+  source: string;
+  total_records: number;
+  inserted_count: number;
+  updated_count: number;
+  duplicate_count: number;
+  error_count: number;
+  status: 'completed' | 'failed';
 }`,
     },
     jd_analysis_matching: {

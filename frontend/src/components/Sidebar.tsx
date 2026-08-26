@@ -37,15 +37,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab }) => {
       badge: 'Phase 2',
     },
     {
-      id: 'jobs',
-      label: 'Job DB & Ingestion',
-      icon: <Building size={18} />,
-      badge: 'Phase 3',
-    },
-    {
       id: 'discovery',
       label: 'Job Discovery & Feeds',
       icon: <Compass size={18} />,
+      badge: 'Phase 3',
+    },
+    {
+      id: 'jobs',
+      label: 'Job DB & Ingestion',
+      icon: <Building size={18} />,
       badge: 'Phase 4',
     },
     {

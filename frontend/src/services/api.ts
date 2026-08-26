@@ -429,6 +429,36 @@ export const api = {
     return handleResponse<Job>(res);
   },
 
+  async updateJob(id: number, payload: Partial<Job>): Promise<Job> {
+    const res = await fetch(`${API_BASE}/jobs/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<Job>(res);
+  },
+
+  async archiveJob(id: number): Promise<Job> {
+    const res = await fetch(`${API_BASE}/jobs/${id}/archive`, {
+      method: 'POST',
+    });
+    return handleResponse<Job>(res);
+  },
+
+  async rejectJob(id: number): Promise<Job> {
+    const res = await fetch(`${API_BASE}/jobs/${id}/reject`, {
+      method: 'POST',
+    });
+    return handleResponse<Job>(res);
+  },
+
+  async restoreJob(id: number): Promise<Job> {
+    const res = await fetch(`${API_BASE}/jobs/${id}/restore`, {
+      method: 'POST',
+    });
+    return handleResponse<Job>(res);
+  },
+
   async ingestJobsJson(jsonPayload: string, source: string = 'json_import'): Promise<JobIngestionBatch> {
     const res = await fetch(`${API_BASE}/jobs/ingest/json`, {
       method: 'POST',

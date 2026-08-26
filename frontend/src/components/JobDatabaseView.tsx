@@ -9,6 +9,8 @@ import {
   ExternalLink,
   X,
   RefreshCw,
+  Archive,
+  CheckCircle,
 } from 'lucide-react';
 import { api, JobFilterParams } from '../services/api';
 import { Job, Company, JobIngestionBatch } from '../types';
@@ -24,6 +26,7 @@ export const JobDatabaseView: React.FC = () => {
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [selectedWorkplace, setSelectedWorkplace] = useState<string>('all');
   const [selectedSeniority, setSelectedSeniority] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'archived' | 'all'>('active');
 
   // Selected Job for Details Modal
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -47,6 +50,8 @@ export const JobDatabaseView: React.FC = () => {
         company: selectedCompany || undefined,
         remote_type: selectedWorkplace !== 'all' ? selectedWorkplace : undefined,
         seniority_level: selectedSeniority !== 'all' ? selectedSeniority : undefined,
+        is_active: statusFilter === 'active' ? true : statusFilter === 'archived' ? false : undefined,
+        status: statusFilter === 'archived' ? undefined : undefined,
         page: 1,
         page_size: 50,
       };
@@ -58,7 +63,7 @@ export const JobDatabaseView: React.FC = () => {
     } finally {
       setLoadingJobs(false);
     }
-  }, [searchKeyword, selectedCompany, selectedWorkplace, selectedSeniority]);
+  }, [searchKeyword, selectedCompany, selectedWorkplace, selectedSeniority, statusFilter]);
 
   const fetchCompanies = useCallback(async () => {
     try {
@@ -145,6 +150,30 @@ export const JobDatabaseView: React.FC = () => {
     }
   };
 
+  const handleArchiveJob = async (jobId: number) => {
+    try {
+      await api.archiveJob(jobId);
+      await fetchJobs();
+      if (selectedJob && selectedJob.id === jobId) {
+        setSelectedJob((prev) => prev ? { ...prev, is_active: false, status: 'archived' } : null);
+      }
+    } catch (err: any) {
+      alert(`Failed to archive job: ${err.message}`);
+    }
+  };
+
+  const handleRestoreJob = async (jobId: number) => {
+    try {
+      await api.restoreJob(jobId);
+      await fetchJobs();
+      if (selectedJob && selectedJob.id === jobId) {
+        setSelectedJob((prev) => prev ? { ...prev, is_active: true, status: 'discovered' } : null);
+      }
+    } catch (err: any) {
+      alert(`Failed to restore job: ${err.message}`);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Top Banner */}
@@ -162,7 +191,7 @@ export const JobDatabaseView: React.FC = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Normalized Job Database & Ingestion Hub</h2>
-            <span className="badge badge-blue">Phase 3 Active</span>
+            <span className="badge badge-blue">Phase 4 Active</span>
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
             Structured repository of discovered opportunities with deterministic, conservative deduplication.
@@ -301,13 +330,26 @@ export const JobDatabaseView: React.FC = () => {
                 </select>
               </div>
 
-              {(searchKeyword || selectedCompany || selectedWorkplace !== 'all' || selectedSeniority !== 'all') && (
+              <div style={{ flex: '1 1 150px' }}>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                  style={{ width: '100%', padding: '0.55rem 0.75rem', background: '#090d16', border: '1px solid var(--border-color)', borderRadius: '6px', color: '#f8fafc', fontSize: '0.8125rem' }}
+                >
+                  <option value="active">Status: Active</option>
+                  <option value="archived">Status: Archived / Rejected</option>
+                  <option value="all">Status: All</option>
+                </select>
+              </div>
+
+              {(searchKeyword || selectedCompany || selectedWorkplace !== 'all' || selectedSeniority !== 'all' || statusFilter !== 'active') && (
                 <button
                   onClick={() => {
                     setSearchKeyword('');
                     setSelectedCompany('');
                     setSelectedWorkplace('all');
                     setSelectedSeniority('all');
+                    setStatusFilter('active');
                   }}
                   className="btn btn-secondary"
                   style={{ fontSize: '0.8125rem', padding: '0.55rem 0.75rem', whiteSpace: 'nowrap' }}
@@ -350,6 +392,11 @@ export const JobDatabaseView: React.FC = () => {
                         {job.remote_type && (
                           <span className={`badge ${job.remote_type === 'remote' ? 'badge-green' : 'badge-blue'}`} style={{ fontSize: '0.6875rem' }}>
                             {job.remote_type.toUpperCase()}
+                          </span>
+                        )}
+                        {(!job.is_active || job.status === 'archived' || job.status === 'rejected') && (
+                          <span className="badge badge-yellow" style={{ fontSize: '0.6875rem' }}>
+                            {job.status.toUpperCase()}
                           </span>
                         )}
                         {job.source && (
@@ -398,6 +445,28 @@ export const JobDatabaseView: React.FC = () => {
                       >
                         <span>View Details</span>
                       </button>
+
+                      {!job.is_active || job.status === 'archived' || job.status === 'rejected' ? (
+                        <button
+                          onClick={() => handleRestoreJob(job.id)}
+                          className="btn btn-secondary"
+                          style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', color: '#34d399', borderColor: '#059669' }}
+                          title="Restore to Active"
+                        >
+                          <CheckCircle size={13} />
+                          <span>Restore</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleArchiveJob(job.id)}
+                          className="btn btn-secondary"
+                          style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+                          title="Archive / Not Relevant"
+                        >
+                          <Archive size={13} />
+                          <span>Archive</span>
+                        </button>
+                      )}
 
                       {job.url && (
                         <a
@@ -686,6 +755,9 @@ export const JobDatabaseView: React.FC = () => {
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
               {selectedJob.seniority_level && <span className="badge badge-purple">{selectedJob.seniority_level}</span>}
               {selectedJob.remote_type && <span className="badge badge-green">{selectedJob.remote_type}</span>}
+              {(!selectedJob.is_active || selectedJob.status === 'archived' || selectedJob.status === 'rejected') && (
+                <span className="badge badge-yellow">{selectedJob.status.toUpperCase()}</span>
+              )}
               {selectedJob.salary_min && (
                 <span className="badge badge-blue">
                   {selectedJob.currency} {Number(selectedJob.salary_min).toLocaleString()}
@@ -708,18 +780,39 @@ export const JobDatabaseView: React.FC = () => {
                 <div>Deduplication Signature Hash: <code>{selectedJob.dedup_hash || 'N/A'}</code></div>
                 <div>Source Feed: <code>{selectedJob.source}</code> {selectedJob.external_id && `· Ext ID: ${selectedJob.external_id}`}</div>
               </div>
-              {selectedJob.url && (
-                <a
-                  href={selectedJob.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-primary"
-                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
-                >
-                  <ExternalLink size={14} />
-                  <span>Open Job Posting</span>
-                </a>
-              )}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {!selectedJob.is_active || selectedJob.status === 'archived' || selectedJob.status === 'rejected' ? (
+                  <button
+                    onClick={() => handleRestoreJob(selectedJob.id)}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', color: '#34d399', borderColor: '#059669' }}
+                  >
+                    <CheckCircle size={14} />
+                    <span>Restore to Active</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleArchiveJob(selectedJob.id)}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+                  >
+                    <Archive size={14} />
+                    <span>Archive (Not Relevant)</span>
+                  </button>
+                )}
+                {selectedJob.url && (
+                  <a
+                    href={selectedJob.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-primary"
+                    style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                  >
+                    <ExternalLink size={14} />
+                    <span>Open Job Posting</span>
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -11,11 +11,17 @@ import {
   Award,
   Check,
   Copy,
+  XCircle,
+  FileText,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Job, JobAnalysis, LLMStatusResponse } from '../types';
 
-export const JDAnalysisView: React.FC = () => {
+interface JDAnalysisViewProps {
+  onNavigateToTailoring?: (jobId: number) => void;
+}
+
+export const JDAnalysisView: React.FC<JDAnalysisViewProps> = ({ onNavigateToTailoring }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -26,6 +32,33 @@ export const JDAnalysisView: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [customInstructions, setCustomInstructions] = useState<string>('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleRejectJob = async () => {
+    if (!selectedJobId) return;
+    try {
+      await api.rejectJob(selectedJobId);
+      setSelectedJob((prev) => prev ? { ...prev, is_active: false, status: 'rejected' } : null);
+      setJobs((prev) => prev.map((j) => (j.id === selectedJobId ? { ...j, is_active: false, status: 'rejected' } : j)));
+    } catch (err: any) {
+      alert(`Failed to mark job as not relevant: ${err.message}`);
+    }
+  };
+
+  const handleRestoreJob = async () => {
+    if (!selectedJobId) return;
+    try {
+      await api.restoreJob(selectedJobId);
+      setSelectedJob((prev) => prev ? { ...prev, is_active: true, status: 'analyzed' } : null);
+      setJobs((prev) => prev.map((j) => (j.id === selectedJobId ? { ...j, is_active: true, status: 'analyzed' } : j)));
+    } catch (err: any) {
+      alert(`Failed to restore job: ${err.message}`);
+    }
+  };
+
+  const handleProceedToTailoring = () => {
+    if (!selectedJobId || !onNavigateToTailoring) return;
+    onNavigateToTailoring(selectedJobId);
+  };
 
   const fetchLLMAndJobs = useCallback(async () => {
     try {
@@ -367,6 +400,72 @@ export const JDAnalysisView: React.FC = () => {
                     <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                       Model: <code>{analysis.model_used || 'qwen3:8b'}</code>
                     </div>
+                  </div>
+                </div>
+
+                {/* Candidate Alignment Decision Action Point */}
+                <div
+                  style={{
+                    background: '#090d16',
+                    padding: '0.875rem 1rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${selectedJob?.status === 'rejected' || selectedJob?.status === 'archived' || !selectedJob?.is_active ? 'rgba(248, 113, 113, 0.4)' : 'var(--border-color)'}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span>Relevance Decision</span>
+                      {(!selectedJob?.is_active || selectedJob?.status === 'rejected' || selectedJob?.status === 'archived') && (
+                        <span className="badge badge-yellow" style={{ fontSize: '0.625rem' }}>
+                          {selectedJob?.status.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.125rem' }}>
+                      {selectedJob?.status === 'rejected' || selectedJob?.status === 'archived' || !selectedJob?.is_active
+                        ? 'This job is currently marked as Not Relevant / Skipped.'
+                        : 'Decide whether to proceed with tailoring or skip this opportunity.'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {selectedJob?.status === 'rejected' || selectedJob?.status === 'archived' || !selectedJob?.is_active ? (
+                      <button
+                        onClick={handleRestoreJob}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', color: '#34d399', borderColor: '#059669' }}
+                      >
+                        <CheckCircle size={13} />
+                        <span>Restore to Active</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleRejectJob}
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+                      >
+                        <XCircle size={13} />
+                        <span>Not Relevant / Skip</span>
+                      </button>
+                    )}
+
+                    {onNavigateToTailoring && (
+                      <button
+                        onClick={handleProceedToTailoring}
+                        disabled={selectedJob?.status === 'rejected' || selectedJob?.status === 'archived' || !selectedJob?.is_active}
+                        className="btn btn-primary"
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                        title={selectedJob?.status === 'rejected' || !selectedJob?.is_active ? 'Job is rejected/skipped. Restore it to tailor.' : 'Proceed to Phase 6 Resume Tailoring Studio'}
+                      >
+                        <FileText size={13} />
+                        <span>Tailor Resume</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
