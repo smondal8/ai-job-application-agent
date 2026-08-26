@@ -201,9 +201,9 @@ def test_non_negotiable_final_submit_guard_on_obvious_submit_button(db_session: 
 
 
 def test_preparation_engine_detects_captcha_and_stops_safely(db_session: Session, setup_phase9_approved_app: dict):
-    """Proves that when CAPTCHA / bot challenge is present, engine safely pauses without bypassing."""
+    """Proves that when CAPTCHA / bot challenge is present, engine safely pauses without bypassing and puts application into ACTION_REQUIRED."""
     app_entity = setup_phase9_approved_app["app"]
-    approval_service.grant_approval(db=db_session, application_id=app_entity.id)
+    approval = approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
     fixture_url = f"file://{FIXTURES_DIR / 'captcha_challenge_app.html'}"
     run = browser_preparation_engine.prepare_application(
@@ -213,14 +213,43 @@ def test_preparation_engine_detects_captcha_and_stops_safely(db_session: Session
         custom_portal_url=fixture_url,
     )
 
+    # 1. Run record checks
     assert run.status == "blocked_by_captcha"
     assert run.captcha_detected is True
     assert run.final_submit_clicked is False
     assert run.screenshot_path is not None
 
+    # 2. Application state checks
+    db_session.refresh(app_entity)
+    assert app_entity.status == "action_required"
+    assert app_entity.error_message is not None
+    assert "CAPTCHA" in app_entity.error_message
+
+    # 3. Preserved application state & approval integrity
+    assert app_entity.tailored_resume_id == setup_phase9_approved_app["resume"].id
+    assert app_entity.candidate_profile_id == setup_phase9_approved_app["profile"].id
+    assert app_entity.job_id == setup_phase9_approved_app["job"].id
+    assert app_entity.approval_token == approval.approval_token
+
+    # 4. Hashes remain identical (no resume regeneration or tampering)
+    verify_res = approval_service.verify_approval(db=db_session, application_id=app_entity.id)
+    assert verify_res["is_valid"] is True
+
+    # 5. User explicitly resumes after manual verification
+    from app.services.approval.state_machine import transition_application, ApplicationStatus
+    transition_application(app_entity, ApplicationStatus.STAGED_FOR_PREPARATION.value, reason="User completed verification")
+    app_entity.error_message = None
+    db_session.commit()
+    db_session.refresh(app_entity)
+
+    assert app_entity.status == "staged_for_preparation"
+    assert app_entity.error_message is None
+    # Approval remains valid
+    assert approval_service.verify_approval(db=db_session, application_id=app_entity.id)["is_valid"] is True
+
 
 def test_preparation_engine_detects_auth_wall_and_stops_safely(db_session: Session, setup_phase9_approved_app: dict):
-    """Proves that when login authentication wall is present, engine pauses for human input."""
+    """Proves that when login authentication wall is present, engine pauses for human input and sets ACTION_REQUIRED."""
     app_entity = setup_phase9_approved_app["app"]
     approval_service.grant_approval(db=db_session, application_id=app_entity.id)
 
@@ -235,6 +264,10 @@ def test_preparation_engine_detects_auth_wall_and_stops_safely(db_session: Sessi
     assert run.status == "blocked_by_auth"
     assert run.auth_required is True
     assert run.final_submit_clicked is False
+
+    db_session.refresh(app_entity)
+    assert app_entity.status == "action_required"
+    assert app_entity.error_message is not None
 
 
 def test_preparation_engine_pauses_on_ambiguous_fields(db_session: Session, setup_phase9_approved_app: dict):

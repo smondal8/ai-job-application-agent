@@ -315,6 +315,44 @@ def get_latest_preparation_run(
     return PreparationRunResponse.model_validate(run)
 
 
+@router.post("/{application_id}/continue-after-verification", response_model=ApplicationResponse, summary="Resume Workflow After Manual Verification")
+def continue_after_verification(
+    application_id: int,
+    db: Session = Depends(get_db),
+) -> ApplicationResponse:
+    """Explicitly resume application workflow after user manually completes browser verification or CAPTCHA challenge."""
+    from datetime import datetime, timezone
+    from app.core.errors import NotFoundError
+    from app.models.application import Application
+    from app.models.audit import AuditLog
+    from app.services.approval.state_machine import ApplicationStatus, transition_application
+
+    app_record = db.query(Application).filter(Application.id == application_id).first()
+    if not app_record:
+        raise NotFoundError(f"Application #{application_id} not found.")
+
+    if app_record.status == ApplicationStatus.ACTION_REQUIRED.value:
+        transition_application(app_record, ApplicationStatus.STAGED_FOR_PREPARATION.value, reason="User completed verification")
+        app_record.error_message = None
+        db.commit()
+
+        audit = AuditLog(
+            application_id=app_record.id,
+            stage="browser_automation_staging",
+            action="APPLICATION_CHALLENGE_RESUMED",
+            message=f"User verified challenge and explicitly resumed browser preparation for application #{app_record.id}.",
+            payload={
+                "application_id": app_record.id,
+                "resumed_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        db.add(audit)
+        db.commit()
+        db.refresh(app_record)
+
+    return ApplicationResponse.model_validate(app_record)
+
+
 @router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete Application")
 def delete_application(
     application_id: int,

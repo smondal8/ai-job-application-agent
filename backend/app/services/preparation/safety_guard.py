@@ -14,13 +14,19 @@ class PlaywrightSafetyGuard:
         "iframe[src*='cloudflare']",
         "iframe[src*='turnstile']",
         "iframe[src*='challenges.cloudflare.com']",
+        "iframe[title*='challenge']",
+        "iframe[title*='reCAPTCHA']",
         ".g-recaptcha",
         ".h-captcha",
         ".cf-turnstile",
         "#cf-challenge-running",
         "#challenge-form",
         ".challenge-form",
+        "#challenge-stage",
         "div[class*='captcha']",
+        "div[id*='captcha']",
+        "div[class*='challenge']",
+        "div[id*='challenge']",
     ]
 
     CAPTCHA_TEXT_PATTERNS = [
@@ -30,6 +36,12 @@ class PlaywrightSafetyGuard:
         re.compile(r"cloudflare ray id", re.IGNORECASE),
         re.compile(r"attention required! \| cloudflare", re.IGNORECASE),
         re.compile(r"press & hold", re.IGNORECASE),
+        re.compile(r"bot verification", re.IGNORECASE),
+        re.compile(r"human verification", re.IGNORECASE),
+        re.compile(r"security verification", re.IGNORECASE),
+        re.compile(r"confirm you are not a robot", re.IGNORECASE),
+        re.compile(r"unsupported browser challenge", re.IGNORECASE),
+        re.compile(r"checking your browser before accessing", re.IGNORECASE),
     ]
 
     AUTH_SELECTORS = [

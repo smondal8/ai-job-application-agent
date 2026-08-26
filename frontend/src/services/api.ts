@@ -253,6 +253,13 @@ export const api = {
     return handleResponse<any>(res);
   },
 
+  async continueAfterVerification(id: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/applications/${id}/continue-after-verification`, {
+      method: 'POST',
+    });
+    return handleResponse<any>(res);
+  },
+
   async deleteApplication(id: number): Promise<void> {
     const res = await fetch(`${API_BASE}/applications/${id}`, {
       method: 'DELETE',

@@ -12,7 +12,8 @@ from app.models.application import Application
 from app.models.approval import ApplicationApproval
 from app.models.preparation import BrowserPreparationRun
 from app.models.audit import AuditLog
-from app.services.approval import approval_service, ApplicationStatus
+from app.services.approval import approval_service
+from app.services.approval.state_machine import ApplicationStatus, transition_application
 from app.services.preparation.adapter_base import PreparationContext, PreparationResult
 from app.services.preparation.adapter_registry import preparation_adapter_registry
 from app.services.preparation.safety_guard import PlaywrightSafetyGuard
@@ -143,6 +144,23 @@ class BrowserPreparationEngine:
             duration_ms=prep_result.duration_ms,
         )
         db.add(run_record)
+
+        # Handle CAPTCHA / Browser Challenge Safe State Transition
+        is_challenge = prep_result.captcha_detected or prep_result.status in ("blocked_by_captcha", "blocked_by_auth")
+        if is_challenge:
+            challenge_reason = "CAPTCHA / Browser Challenge" if (prep_result.captcha_detected or prep_result.status == "blocked_by_captcha") else "Authentication Required"
+            transition_application(application, ApplicationStatus.ACTION_REQUIRED, reason=challenge_reason)
+            application.error_message = prep_result.error_message or "Browser verification required: Portal challenge detected."
+            action_name = "APPLICATION_CAPTCHA_DETECTED" if (prep_result.captcha_detected or prep_result.status == "blocked_by_captcha") else "APPLICATION_CHALLENGE_DETECTED"
+            msg = f"Browser verification required: CAPTCHA / bot challenge detected for application #{application.id}. Automation paused safely for human intervention."
+            challenge_type = "CAPTCHA_REQUIRED" if (prep_result.captcha_detected or prep_result.status == "blocked_by_captcha") else "AUTH_REQUIRED"
+        else:
+            if application.status != ApplicationStatus.STAGED_FOR_PREPARATION.value:
+                transition_application(application, ApplicationStatus.STAGED_FOR_PREPARATION)
+            action_name = "APPLICATION_BROWSER_STAGED"
+            msg = f"Browser application staged for App #{application.id} via adapter '{adapter.portal_name}'. Status: {prep_result.status}. Fields filled: {len(prep_result.fields_filled)}. Submit guard active."
+            challenge_type = None
+
         db.commit()
         db.refresh(run_record)
 
@@ -150,18 +168,18 @@ class BrowserPreparationEngine:
         audit = AuditLog(
             application_id=application.id,
             stage="browser_automation_staging",
-            action="APPLICATION_BROWSER_STAGED",
-            message=(
-                f"Browser application staged for App #{application.id} via adapter '{adapter.portal_name}'. "
-                f"Status: {prep_result.status}. Fields filled: {len(prep_result.fields_filled)}. Submit guard active."
-            ),
+            action=action_name,
+            message=msg,
             payload={
                 "run_id": run_record.id,
                 "portal_type": adapter.portal_name,
                 "status": prep_result.status,
+                "challenge_type": challenge_type,
+                "detected_at": datetime.now(timezone.utc).isoformat() if is_challenge else None,
                 "fields_filled_count": len(prep_result.fields_filled),
                 "unresolved_count": len(prep_result.unresolved_fields),
                 "guard_triggered": prep_result.guard_triggered,
+                "captcha_detected": prep_result.captcha_detected,
                 "screenshot_path": prep_result.screenshot_path,
             },
         )

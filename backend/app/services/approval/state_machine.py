@@ -10,6 +10,7 @@ class ApplicationStatus(str, Enum):
     IN_REVIEW = "in_review"
     APPROVED = "approved"
     STAGED_FOR_PREPARATION = "staged_for_preparation"
+    ACTION_REQUIRED = "action_required"
     REQUIRES_REAPPROVAL = "requires_reapproval"
     REJECTED = "rejected"
     SUBMITTED = "submitted"
@@ -35,6 +36,7 @@ ALLOWED_TRANSITIONS: Dict[ApplicationStatus, List[ApplicationStatus]] = {
     ],
     ApplicationStatus.APPROVED: [
         ApplicationStatus.STAGED_FOR_PREPARATION,
+        ApplicationStatus.ACTION_REQUIRED,
         ApplicationStatus.REQUIRES_REAPPROVAL,
         ApplicationStatus.REJECTED,
         ApplicationStatus.IN_REVIEW,
@@ -42,9 +44,17 @@ ALLOWED_TRANSITIONS: Dict[ApplicationStatus, List[ApplicationStatus]] = {
     ],
     ApplicationStatus.STAGED_FOR_PREPARATION: [
         ApplicationStatus.APPROVED,
+        ApplicationStatus.ACTION_REQUIRED,
         ApplicationStatus.REQUIRES_REAPPROVAL,
         ApplicationStatus.IN_REVIEW,
         ApplicationStatus.SUBMITTED,
+        ApplicationStatus.ARCHIVED,
+    ],
+    ApplicationStatus.ACTION_REQUIRED: [
+        ApplicationStatus.STAGED_FOR_PREPARATION,
+        ApplicationStatus.APPROVED,
+        ApplicationStatus.REQUIRES_REAPPROVAL,
+        ApplicationStatus.REJECTED,
         ApplicationStatus.ARCHIVED,
     ],
     ApplicationStatus.REQUIRES_REAPPROVAL: [
