@@ -143,7 +143,7 @@ export const JobDiscoveryView: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Compass size={24} color="#38bdf8" />
             <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Source-Agnostic Job Discovery Framework</h2>
-            <span className="badge badge-blue">Phase 4 Active</span>
+            <span className="badge badge-blue">Phase 3 Active</span>
           </div>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
             Adapter-based job discovery with rate limiting, exponential backoff retries, and safe fallback for bot-protected platforms.

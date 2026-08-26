@@ -196,11 +196,23 @@ class JobIngestionService:
                 if existing_job:
                     # Conservative update: update timestamp, enrich empty fields
                     existing_job.last_seen_at = now
-                    existing_job.is_active = True
+                    
+                    # Preserve user relevance decisions: do not reactivate if marked archived or rejected
+                    if existing_job.status in ["archived", "rejected"] or not existing_job.is_active:
+                        pass
+                    else:
+                        existing_job.is_active = True
+
                     if not existing_job.dedup_hash:
                         existing_job.dedup_hash = dedup_hash
                     if not existing_job.description_raw and norm_dict.get("description_raw"):
                         existing_job.description_raw = norm_dict["description_raw"]
+                    if not existing_job.location and norm_dict.get("location"):
+                        existing_job.location = norm_dict["location"]
+                    if not existing_job.salary_min and norm_dict.get("salary_min"):
+                        existing_job.salary_min = norm_dict["salary_min"]
+                    if not existing_job.salary_max and norm_dict.get("salary_max"):
+                        existing_job.salary_max = norm_dict["salary_max"]
                     if not existing_job.company_id and company_entity:
                         existing_job.company_id = company_entity.id
                     

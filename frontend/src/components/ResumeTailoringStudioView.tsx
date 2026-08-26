@@ -18,9 +18,13 @@ import {
 import { api } from '../services/api';
 import { Job, TailoredResume, LLMStatusResponse } from '../types';
 
-export const ResumeTailoringStudioView: React.FC = () => {
+interface ResumeTailoringStudioViewProps {
+  initialJobId?: number;
+}
+
+export const ResumeTailoringStudioView: React.FC<ResumeTailoringStudioViewProps> = ({ initialJobId }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<number | null>(initialJobId || null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [tailoredResume, setTailoredResume] = useState<TailoredResume | null>(null);
   const [llmStatus, setLlmStatus] = useState<LLMStatusResponse | null>(null);
@@ -48,14 +52,16 @@ export const ResumeTailoringStudioView: React.FC = () => {
       setLlmStatus(statusData);
       setJobs(jobsData.items);
 
-      if (jobsData.items.length > 0 && !selectedJobId) {
-        setSelectedJobId(jobsData.items[0].id);
-        setSelectedJob(jobsData.items[0]);
+      const targetId = initialJobId || selectedJobId || (jobsData.items.length > 0 ? jobsData.items[0].id : null);
+      if (targetId) {
+        setSelectedJobId(targetId);
+        const target = jobsData.items.find((j) => j.id === targetId) || (jobsData.items.length > 0 ? jobsData.items[0] : null);
+        setSelectedJob(target);
       }
     } catch (err) {
       console.error('Failed to load LLM status or jobs:', err);
     }
-  }, [selectedJobId]);
+  }, [initialJobId, selectedJobId]);
 
   const fetchJobTailoredResume = useCallback(async (jobId: number) => {
     try {

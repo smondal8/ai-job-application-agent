@@ -25,6 +25,8 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedJobIdForTailoring, setSelectedJobIdForTailoring] = useState<number | undefined>(undefined);
+
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -147,8 +149,15 @@ export const App: React.FC = () => {
 
           {activeTab === 'observability' && <SystemObservabilityView />}
           {activeTab === 'applications' && <ApplicationDashboardView />}
-          {activeTab === 'tailoring' && <ResumeTailoringStudioView />}
-          {activeTab === 'analysis' && <JDAnalysisView />}
+          {activeTab === 'tailoring' && <ResumeTailoringStudioView initialJobId={selectedJobIdForTailoring} />}
+          {activeTab === 'analysis' && (
+            <JDAnalysisView
+              onNavigateToTailoring={(jobId) => {
+                setSelectedJobIdForTailoring(jobId);
+                setActiveTab('tailoring');
+              }}
+            />
+          )}
           {activeTab === 'discovery' && <JobDiscoveryView />}
           {activeTab === 'jobs' && <JobDatabaseView />}
           {activeTab === 'profile' && <CandidateProfileView />}

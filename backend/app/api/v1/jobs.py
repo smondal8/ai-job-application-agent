@@ -27,7 +27,7 @@ def list_jobs(
     location: Optional[str] = Query(None, description="Filter by location"),
     remote_type: Optional[str] = Query(None, description="Filter: remote, hybrid, on_site"),
     seniority_level: Optional[str] = Query(None, description="Filter: entry, mid, senior, staff, lead, principal"),
-    status: Optional[str] = Query(None, description="Filter by job status (discovered, analyzing, applied)"),
+    status: Optional[str] = Query(None, description="Filter by job status (discovered, analyzing, applied, archived, rejected)"),
     min_salary: Optional[float] = Query(None, description="Minimum base salary"),
     is_active: Optional[bool] = Query(True, description="Filter active jobs only"),
     page: int = Query(1, ge=1),
@@ -36,7 +36,15 @@ def list_jobs(
 ) -> JobListResponse:
     query = db.query(Job)
 
-    if is_active is not None:
+    if status and status.strip():
+        st = status.strip().lower()
+        if st in ["archived", "rejected"]:
+            query = query.filter(Job.status == st)
+        else:
+            query = query.filter(Job.status == st)
+            if is_active is not None:
+                query = query.filter(Job.is_active == is_active)
+    elif is_active is not None:
         query = query.filter(Job.is_active == is_active)
 
     if search and search.strip():
@@ -47,6 +55,7 @@ def list_jobs(
                 Job.company.ilike(s),
                 Job.description_raw.ilike(s),
                 Job.normalized_title.ilike(s),
+                Job.location.ilike(s),
             )
         )
 
@@ -61,9 +70,6 @@ def list_jobs(
 
     if seniority_level and seniority_level.strip():
         query = query.filter(Job.seniority_level == seniority_level.strip().lower())
-
-    if status and status.strip():
-        query = query.filter(Job.status == status.strip().lower())
 
     if min_salary is not None:
         query = query.filter(Job.salary_max >= min_salary)
@@ -123,11 +129,59 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     return JobResponse.model_validate(job)
 
 
+@router.patch("/{job_id}", response_model=JobResponse, summary="Patch Job")
+def patch_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)) -> JobResponse:
+    return update_job(job_id=job_id, job_update=job_update, db=db)
+
+
+@router.post("/{job_id}/archive", response_model=JobResponse, summary="Archive Job (Not Relevant)")
+def archive_job(job_id: int, db: Session = Depends(get_db)) -> JobResponse:
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise NotFoundError(f"Job with id {job_id} not found.")
+    job.is_active = False
+    job.status = "archived"
+    db.commit()
+    db.refresh(job)
+    return JobResponse.model_validate(job)
+
+
+@router.post("/{job_id}/reject", response_model=JobResponse, summary="Reject / Skip Job")
+def reject_job(job_id: int, db: Session = Depends(get_db)) -> JobResponse:
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise NotFoundError(f"Job with id {job_id} not found.")
+    job.is_active = False
+    job.status = "rejected"
+    db.commit()
+    db.refresh(job)
+    return JobResponse.model_validate(job)
+
+
+@router.post("/{job_id}/restore", response_model=JobResponse, summary="Restore Archived / Rejected Job")
+def restore_job(job_id: int, db: Session = Depends(get_db)) -> JobResponse:
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise NotFoundError(f"Job with id {job_id} not found.")
+    job.is_active = True
+    if job.analyses and len(job.analyses) > 0:
+        job.status = "analyzed"
+    elif job.tailored_resumes and len(job.tailored_resumes) > 0:
+        job.status = "tailored"
+    else:
+        job.status = "discovered"
+    db.commit()
+    db.refresh(job)
+    return JobResponse.model_validate(job)
+
+
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete Job")
 def delete_job(job_id: int, db: Session = Depends(get_db)) -> None:
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         raise NotFoundError(f"Job with id {job_id} not found.")
+    if job.applications and any(app.status not in ["withdrawn", "rejected"] for app in job.applications):
+        raise BadRequestError("Cannot delete job with active applications. Archive the job instead or withdraw active applications.")
     db.delete(job)
     db.commit()
 
