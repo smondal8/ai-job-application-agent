@@ -53,42 +53,54 @@ def build_traceable_tailoring_prompt(
 {fact_registry_text}
 
 ### OUTPUT SPECIFICATION
-Generate tailored application materials grounded in the candidate's verified facts.
-Return a valid JSON object matching this schema:
+Generate tailored application materials grounded strictly in the candidate's verified facts provided above.
+Return ONLY a valid JSON object matching this structure:
+```json
 {{
   "tailored_summary": {{
-    "text": <string: 2-3 sentence executive summary tailored for {role_title} at {company}>,
-    "source_fact_ids": [<string: fact_id>, ...]
+    "text": "Executive summary paragraph tailored for the target role...",
+    "source_fact_ids": ["profile:1:headline", "exp:1:h0"]
   }},
   "tailored_experience": [
     {{
-      "company": <string: existing verified company name>,
-      "position": <string: verified position title>,
-      "start_date": <string>,
-      "end_date": <string or null>,
-      "is_current": <boolean>,
+      "company": "Company Name",
+      "position": "Position Title",
+      "start_date": "YYYY-MM",
+      "end_date": "YYYY-MM or null",
+      "is_current": false,
       "tailored_highlights": [
         {{
-          "text": <string: high-impact bullet point starting with strong action verb and quantified outcome>,
-          "source_fact_ids": [<string: exact fact_id, e.g. "exp:1:h0", "skill:python">]
+          "text": "High-impact bullet point starting with strong action verb...",
+          "source_fact_ids": ["exp:1:h0"]
         }}
       ]
     }}
   ],
   "highlighted_skills": [
     {{
-      "name": <string: skill name>,
-      "source_fact_ids": [<string: exact skill fact_id, e.g. "skill:fastapi">]
+      "name": "Skill Name",
+      "source_fact_ids": ["skill:skill_id"]
     }}
   ],
   "cover_letter_paragraphs": [
     {{
-      "paragraph_type": <"opening" | "body_experience" | "body_skills" | "closing">,
-      "text": <string: tailored paragraph for {company}>,
-      "source_fact_ids": [<string: fact_id>, ...]
+      "paragraph_type": "opening",
+      "text": "Opening paragraph expressing interest...",
+      "source_fact_ids": ["profile:1:headline"]
+    }},
+    {{
+      "paragraph_type": "body_experience",
+      "text": "Body paragraph highlighting relevant accomplishments...",
+      "source_fact_ids": ["exp:1:h0"]
+    }},
+    {{
+      "paragraph_type": "closing",
+      "text": "Closing paragraph...",
+      "source_fact_ids": ["profile:1:headline"]
     }}
   ],
-  "diff_summary": <string: concise 1-2 sentence explanation of tailoring strategy and key emphasized strengths>
+  "diff_summary": "Summary of tailoring strategy and key emphasized strengths."
 }}
+```
 """
     return system_prompt, user_prompt

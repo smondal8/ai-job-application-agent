@@ -87,13 +87,20 @@ class AtomicFactRegistry:
                 metadata={"exp_id": exp_id, "company": company, "position": position},
             )
 
-            # Granular highlight bullets
-            for h_idx, highlight in enumerate(exp.get("highlights", [])):
-                if highlight and highlight.strip():
+            # Granular highlight bullets (support both structured highlights array and description text)
+            raw_highlights = exp.get("highlights") or []
+            if not raw_highlights and exp.get("description"):
+                desc_text = str(exp["description"]).strip()
+                desc_lines = [line.strip().lstrip("•-* ").strip() for line in desc_text.split("\n") if line.strip()]
+                raw_highlights = desc_lines if desc_lines else [desc_text]
+
+            for h_idx, highlight in enumerate(raw_highlights):
+                h_str = highlight.get("text", "") if isinstance(highlight, dict) else str(highlight)
+                if h_str and h_str.strip():
                     registry.register(
                         fact_id=f"exp:{exp_id}:h{h_idx}",
                         category="experience",
-                        content=highlight.strip(),
+                        content=h_str.strip(),
                         metadata={"exp_id": exp_id, "company": company, "highlight_index": h_idx},
                     )
 
